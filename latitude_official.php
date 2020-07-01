@@ -10,6 +10,8 @@ if (!defined('_PS_VERSION_')) {
 
 class Latitude_Official extends PaymentModule
 {
+    protected $_html = '';
+
     public function __construct()
     {
         /**
@@ -36,10 +38,7 @@ class Latitude_Official extends PaymentModule
          */
         $this->need_instance = 0;
 
-        /**
-         * @todo: Need to find out what versions will be compatible with
-         */
-        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.6');
+        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.6.99.99');
 
         /**
          * Indicates that the module's template files have been built with PrestaShop 1.6's bootstrap tools in mind
@@ -49,11 +48,15 @@ class Latitude_Official extends PaymentModule
          */
         $this->bootstrap = true;
 
+        $this->currencies = true;
+        $this->currencies_mode = 'checkbox';
+
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
 
-        $this->displayName = $this->l('Latitude Finance');
+        $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ residents who are 18 years old and over and have a valid debit or credit card.');
+        $this->confirmUninstall = $this->l('Are you sure you to uninstall the module?');
 
         /**
          * Check cURL extension
@@ -61,5 +64,166 @@ class Latitude_Official extends PaymentModule
         if (is_callable('curl_init') === false) {
             $this->errors[] = $this->l('To be able to use this module, please activate cURL (PHP extension).');
         }
+
+        if (!count(Currency::checkPaymentCurrencies($this->id))) {
+            $this->warning = $this->l('No currency has been set for this module.');
+        }
     }
+
+    /**
+     * Install this module and register the following Hooks:
+     *
+     * @return bool
+     */
+    public function install()
+    {
+        if (!parent::install() || !$this->registerHook('payment') || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn')) {
+             return false;
+         }
+         return true;
+    }
+
+    /**
+     * Uninstall this module and remove it from all hooks
+     *
+     * @return bool
+     */
+    public function uninstall()
+    {
+        // @todo: remove the configurations
+        return parent::uninstall();
+    }
+
+    /**
+     * Returns a string containing the HTML necessary to
+     * generate a configuration screen on the admin
+     *
+     * @return string
+     */
+    public function getContent()
+    {
+        // @todo: configuration options here?
+        return "<div>Latitude Finance</div>";
+    }
+
+    // @todo: finish the implementation
+    public function checkApiConnection($key, $secret)
+    {
+        return true;
+    }
+
+    public function hookPayment($params)
+    {
+        if (!$this->active) {
+            return;
+        }
+
+        if (!$this->checkCurrency($params['cart'])) {
+            return;
+        }
+
+        $this->smarty->assign(array(
+            'this_path' => $this->_path,
+            'logo' => _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg',
+            'this_path_ssl' => Tools::getShopDomain(true, true) . __PS_BASE_URI__ . 'modules/'.$this->name.'/',
+            'purchase_url' => $this->getPurchaseUrl(),
+        ));
+
+        return $this->display(__FILE__, 'payment.tpl');
+    }
+
+    // @todo: implment the actual logic
+    public function getPurchaseUrl()
+    {
+        return 'http://www.google.co.nz/';
+    }
+
+    /**
+     * Display a message in the paymentReturn hook
+     *
+     * @param array $params
+     * @return string
+     */
+    public function hookPaymentReturn($params)
+    {
+        /**
+         * Verify if this module is enabled
+         */
+        if (!$this->active) {
+            return;
+        }
+
+        // return $this->fetch('module:latitude_official/views/templates/hook/payment_return.tpl');
+    }
+
+    public function checkCurrency($cart)
+    {
+        $currency_order = new Currency($cart->id_currency);
+        $currencies_module = $this->getCurrency($cart->id_currency);
+
+        if (is_array($currencies_module)) {
+            foreach ($currencies_module as $currency_module) {
+                if ($currency_order->id == $currency_module['id_currency']) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public function renderForm()
+    {
+
+    }
+
+    // public function getOfflinePaymentOption()
+    // {
+    //     $offlineOption = new PaymentOption();
+    //     $offlineOption->setCallToActionText($this->l('Pay offline'))
+    //                   ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true))
+    //                   ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
+    //                   ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
+
+    //     return $offlineOption;
+    // }
+
+    // public function getExternalPaymentOption()
+    // {
+    //     $externalOption = new PaymentOption();
+    //     $externalOption->setCallToActionText($this->l('Pay external'))
+    //                    ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true))
+    //                    ->setInputs([
+    //                         'token' => [
+    //                             'name' =>'token',
+    //                             'type' =>'hidden',
+    //                             'value' =>'12345689',
+    //                         ],
+    //                     ])
+    //                    ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
+    //                    ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
+
+    //     return $externalOption;
+    // }
+
+    // public function getEmbeddedPaymentOption()
+    // {
+    //     $embeddedOption = new PaymentOption();
+    //     $embeddedOption->setCallToActionText($this->l('Pay embedded'))
+    //                    ->setForm($this->generateForm())
+    //                    ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
+    //                    ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
+
+    //     return $embeddedOption;
+    // }
+
+    // public function getIframePaymentOption()
+    // {
+    //     $iframeOption = new PaymentOption();
+    //     $iframeOption->setCallToActionText($this->l('Pay iframe'))
+    //                  ->setAction($this->context->link->getModuleLink($this->name, 'iframe', array(), true))
+    //                  ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
+    //                  ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
+
+    //     return $iframeOption;
+    // }
 }

@@ -43,7 +43,7 @@ class Latitude_Official extends PaymentModule
     const LATITUDE_FINANCE_MAX_ORDER_TOTAL = 'LATITUDE_FINANCE_MAX_ORDER_TOTAL';
 
     /**
-     * @var string
+     * @var boolean
      */
     const LATITUDE_FINANCE_DEBUG_MODE = 'LATITUDE_FINANCE_DEBUG_MODE';
 
@@ -249,7 +249,9 @@ class Latitude_Official extends PaymentModule
 
     public function hookPayment($params)
     {
-        if (!$this->active) {
+        $cartAmount = $params['cart']->getOrderTotal();
+
+        if (!$this->active || !$this->isOrderAmountAvailable($cartAmount)) {
             return;
         }
 
@@ -518,6 +520,33 @@ class Latitude_Official extends PaymentModule
                 return $this->displayError($this->l('Confirmation button') . ': ' . $this->l('Invaild choice'));
             }
         }
+    }
+
+    protected function getMinOrderTotal()
+    {
+        if (!$this->configuration) {
+            $this->getConfiguration();
+        }
+        return $this->getConfigData('minimumAmount', $this->configuration);
+    }
+
+    protected function getMaxOrderTotal()
+    {
+        if (!$this->configuration) {
+            $this->getConfiguration();
+        }
+        return $this->getConfigData('maximumAmount', $this->configuration);
+    }
+
+    protected function isOrderAmountAvailable($amount)
+    {
+        $minOrderTotal = $this->getMinOrderTotal();
+        $maxOrderTotal = $this->getMaxOrderTotal();
+
+        if ($amount > $maxOrderTotal || $amount < $minOrderTotal) {
+            return false;
+        }
+        return true;
     }
 
     protected function getConfigData($key, $array, $default = '')

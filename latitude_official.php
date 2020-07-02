@@ -15,17 +15,17 @@ class Latitude_Official extends PaymentModule
     /**
      * @var string
      */
-    const ENVIRONMENT_SANDBOX = 'sandbox';
+    const ENVIRONMENT_DEVELOPMENT = '0';
 
     /**
      * @var string
      */
-    const ENVIRONMENT_PRODUCTION = 'production';
+    const ENVIRONMENT_SANDBOX = '1';
 
     /**
      * @var string
      */
-    const ENVIRONMENT_DEVELOPMENT = 'development';
+    const ENVIRONMENT_PRODUCTION = '2';
 
     public function __construct()
     {
@@ -277,37 +277,11 @@ class Latitude_Official extends PaymentModule
                         'name' => 'LATITUDE_FINANCE_ENVIRONMENT',
                         'col' => 4,
                         'options' => array(
-                            'query' => array(
-                                array('id' => self::ENVIRONMENT_DEVELOPMENT, 'name' => $this->l('Development')),
-                                array('id' => self::ENVIRONMENT_SANDBOX, 'name' => $this->l('Sandbox')),
-                                array('id' => self::ENVIRONMENT_PRODUCTION, 'name' => $this->l('Production')),
-                            ),
-                            'id' => 'latitude_official_environment',
+                            'query' => $this->getEnvironments(),
+                            'id' => 'id_option',
                             'name' => 'environment',
-                            'default' => array(
-                                'label' => $this->l('Sandbox'),
-                                'value' => self::ENVIRONMENT_SANDBOX
-                            )
                         )
                     ),
-                    // array(
-                    //     'type' => 'select',
-                    //     'label' => $this->l('Environment'),
-                    //     'options' => array(
-                    //         array(
-                    //             'value' => self::ENVIRONMENT_DEVELOPMENT,
-                    //             'label' => $this->l('Development')
-                    //         ),
-                    //         array(
-                    //             'value' => self::ENVIRONMENT_SANDBOX,
-                    //             'label' => $this->l('Sandbox')
-                    //         ),
-                    //         array(
-                    //             'value' => self::ENVIRONMENT_PRODUCTION,
-                    //             'label' => $this->l('Production')
-                    //         )
-                    //     )
-                    // )
                 ),
                 'submit' => array(
                     'name' => 'submitSave',
@@ -335,6 +309,24 @@ class Latitude_Official extends PaymentModule
         );
 
         return $helper->generateForm(array($fields_form));
+    }
+
+    public function getEnvironments()
+    {
+        return array(
+            array(
+                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
+                'environment' => 'Development'
+            ),
+            array(
+                'id_option' => self::ENVIRONMENT_SANDBOX,
+                'environment' => 'Sandbox'
+            ),
+            array(
+                'id_option' => self::ENVIRONMENT_PRODUCTION,
+                'environment' => 'Production'
+            ),
+        );
     }
 
     /**

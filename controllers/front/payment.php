@@ -22,28 +22,36 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'currencies' => $this->module->getCurrency((int)$cart->id_currency),
             'total' => $cart->getOrderTotal(true, Cart::BOTH),
             'isoCode' => $this->context->language->iso_code,
-            'apikey' => $this->module->chequeName,
-            'apiPassword' => Tools::nl2br($this->module->address),
+            // 'apikey' => $this->module->chequeName,
+            // 'apiPassword' => Tools::nl2br($this->module->address),
             'this_path' => $this->module->getPathUri(),
             'this_path_cheque' => $this->module->getPathUri(),
-            'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/'
+            'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
+            'purchase_url' => $this->getPurchaseUrl(),
         ));
 
-        echo "<pre>";
-        var_dump(array(
-            'nbProducts' => $cart->nbProducts(),
-            'cust_currency' => $cart->id_currency,
-            'currencies' => $this->module->getCurrency((int)$cart->id_currency),
-            'total' => $cart->getOrderTotal(true, Cart::BOTH),
-            'isoCode' => $this->context->language->iso_code,
-            'apikey' => $this->module->chequeName,
-            'apiPassword' => Tools::nl2br($this->module->address),
-            'this_path' => $this->module->getPathUri(),
-            'this_path_cheque' => $this->module->getPathUri(),
-            'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/'
-        ));
-        echo "</pre>";
+        // echo "<pre>";
+        // var_dump(array(
+        //     'nbProducts' => $cart->nbProducts(),
+        //     'cust_currency' => $cart->id_currency,
+        //     'currencies' => $this->module->getCurrency((int)$cart->id_currency),
+        //     'total' => $cart->getOrderTotal(true, Cart::BOTH),
+        //     'isoCode' => $this->context->language->iso_code,
+        //     // 'apikey' => $this->module->chequeName,
+        //     // 'apiPassword' => Tools::nl2br($this->module->address),
+        //     'this_path' => $this->module->getPathUri(),
+        //     'this_path_cheque' => $this->module->getPathUri(),
+        //     'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
+        //     'purchase_url' => $this->getPurchaseUrl(),
+        // ));
+        // echo "</pre>";
 
         $this->setTemplate('payment_execution.tpl');
+    }
+
+    // @todo: implment the actual logic
+    public function getPurchaseUrl()
+    {
+        return 'http://www.google.co.nz/';
     }
 }

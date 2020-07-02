@@ -8,6 +8,8 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+require_once(__DIR__ . '/includes/autoload.php');
+
 class Latitude_Official extends PaymentModule
 {
     protected $_html = '';
@@ -15,17 +17,56 @@ class Latitude_Official extends PaymentModule
     /**
      * @var string
      */
-    const ENVIRONMENT_DEVELOPMENT = '0';
+    const ENVIRONMENT_DEVELOPMENT = 'development';
 
     /**
      * @var string
      */
-    const ENVIRONMENT_SANDBOX = '1';
+    const ENVIRONMENT_SANDBOX = 'sandbox';
 
     /**
      * @var string
      */
-    const ENVIRONMENT_PRODUCTION = '2';
+    const ENVIRONMENT_PRODUCTION = 'production';
+
+    /**
+     * @var string
+     */
+    const ENVIRONMENT = 'LATITUDE_FINANCE_ENVIRONMENT';
+
+    /**
+     * @var string - The data would be fetch from the API
+     */
+    const LATITUDE_FINANCE_TITLE = 'LATITUDE_FINANCE_TITLE';
+    const LATITUDE_FINANCE_DESCRIPTION = 'LATITUDE_FINANCE_DESCRIPTION';
+    const LATITUDE_FINANCE_MIN_ORDER_TOTAL = 'LATITUDE_FINANCE_MIN_ORDER_TOTAL';
+    const LATITUDE_FINANCE_MAX_ORDER_TOTAL = 'LATITUDE_FINANCE_MAX_ORDER_TOTAL';
+
+    /**
+     * @var string
+     */
+    const LATITUDE_FINANCE_DEBUG_MODE = 'LATITUDE_FINANCE_DEBUG_MODE';
+
+    /**
+     * @var string
+     */
+    const LATITUDE_FINANCE_PUBLIC_KEY = 'LATITUDE_FINANCE_PUBLIC_KEY';
+
+    /**
+     * @var string
+     */
+    const LATITUDE_FINANCE_PRIVATE_KEY = 'LATITUDE_FINANCE_PRIVATE_KEY';
+
+    /**
+     * @var string
+     */
+    const LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY = 'LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY';
+
+    /**
+     * @var string
+     */
+    const LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY = 'LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY';
+
 
     public function __construct()
     {
@@ -34,6 +75,7 @@ class Latitude_Official extends PaymentModule
          * @var string
          */
         $this->name = 'latitude_official';
+        $this->gatewayName = 'genoapay';
 
         /**
          * The title for the section that shall contain this module in PrestaShop's back office modules list.
@@ -65,6 +107,8 @@ class Latitude_Official extends PaymentModule
 
         $this->currencies = true;
         $this->currencies_mode = 'checkbox';
+
+        $this->configuration = [];
 
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
@@ -110,15 +154,112 @@ class Latitude_Official extends PaymentModule
     }
 
     // @todo: finish the implementation
-    public function checkApiConnection($key, $secret)
+    public function checkApiConnection($publicKey = null, $privateKey = null)
     {
+        try {
+            $configuration = $this->getConfiguration();
+        } catch (Exception $e) {
+            $this->errors[] = $e->getMessage();
+            return false;
+        }
+
+        if (empty($configuration)) {
+            return false;
+        }
+
         return true;
+    }
+
+    public function getConfiguration()
+    {
+        // initialize payment gateway
+        $gateway = $this->getGateway();
+        // die(get_class($gateway));
+        if (!$gateway) {
+            throw new Exception('The payment gateway cannot been initialized.');
+        }
+
+        if (empty($this->configuration)) {
+            $this->configuration = $gateway->configuration();
+        }
+
+        return $this->configuration;
+    }
+
+    /**
+     * retrieve PostPassword from database
+     *
+     * @param int $storeId
+     *
+     * @return string
+     */
+    public function getCredentials()
+    {
+        $environment = Configuration::get(self::ENVIRONMENT);
+        $publicKey = $privateKey = '';
+        switch ($environment) {
+            case self::ENVIRONMENT_SANDBOX:
+            case self::ENVIRONMENT_DEVELOPMENT:
+                $publicKey = Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY);
+                $privateKey = Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY);
+                break;
+            case self::ENVIRONMENT_PRODUCTION:
+                $publicKey = Configuration::get(self::LATITUDE_FINANCE_PUBLIC_KEY);
+                $privateKey = Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY);
+                break;
+            default:
+                throw new Exception('Failed to get credentials because the environment value is not correct.');
+                break;
+        }
+
+        $credentials = array(
+            'username'      => $publicKey,
+            'password'      => $privateKey,
+            'environment'   => $environment,
+            'accountId'     => ''
+        );
+        return $credentials;
+    }
+
+    public function getGateway()
+    {
+        try {
+            $className = (isset(explode('_', $this->gatewayName)[1])) ? ucfirst(explode('_', $this->gatewayName)[1]) : ucfirst($this->gatewayName);
+            // @todo: validate credentials coming back from the account
+            $gateway = BinaryPay::getGateway($className, $this->getCredentials());
+        } catch (BinaryPay_Exception $e) {
+            $this->errors[] =  $this->l($className .': '. $e->getMessage());
+            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+        } catch (Exception $e) {
+            $this->errors[] = $this->l($className . ': ' . $e->getMessage());
+            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+        }
+
+        if (!isset($gateway)) {
+            throw new Exception('The gateway object did not initialized correctly.');
+        }
+
+        // log everything
+        if (Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)) {
+            $gateway->setConfig(['debug' => true]);
+        }
+
+        return $gateway;
     }
 
     public function hookPayment($params)
     {
         if (!$this->active) {
             return;
+        }
+
+        if (!$this->checkApiConnection()) {
+            $this->context->smarty->assign(array(
+                'latitudeError' => $this->l(
+                    'No credentials have been provided for Latitude Finance. Please contact the owner of the website.',
+                    $this->name
+                )
+            ));
         }
 
         if (!$this->checkCurrency($params['cart'])) {
@@ -220,7 +361,7 @@ class Latitude_Official extends PaymentModule
                         'type' => 'switch',
                         'label' => $this->l('Debug Mode'),
                         'hint' => $this->l('Show Detailed Error Messages and API requests/responses in the log file.'),
-                        'name' => 'LATITUDE_FINANCE_DEBUG_MODE',
+                        'name' => self::LATITUDE_FINANCE_DEBUG_MODE,
                         'is_bool' => true,
                         'values' => array(
                             array(
@@ -239,42 +380,42 @@ class Latitude_Official extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Minimum Order Total'),
                         'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'name' => 'LATITUDE_FINANCE_MIN_ORDER_TOTAL',
+                        'name' => self::LATITUDE_FINANCE_MIN_ORDER_TOTAL,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('Maximum Order Total'),
                         'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'name' => 'LATITUDE_FINANCE_MAX_ORDER_TOTAL',
+                        'name' => self::LATITUDE_FINANCE_MAX_ORDER_TOTAL,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('API Key'),
                         'desc'  => $this->l('The Public Key for your GenoaPay account.'),
-                        'name' => 'LATITUDE_FINANCE_PUBLIC_KEY',
+                        'name' => self::LATITUDE_FINANCE_PUBLIC_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('API Secret'),
                         'desc'  => $this->l('The Private Key for your GenoaPay account.'),
-                        'name' => 'LATITUDE_FINANCE_PRIVATE_KEY',
+                        'name' => self::LATITUDE_FINANCE_PRIVATE_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('Sandbox API Key'),
                         'desc'  => $this->l('The Public Key for your GenoaPay sandbox account.'),
-                        'name' => 'LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY',
+                        'name' => self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('Sandbox API Secret'),
                         'desc'  => $this->l('The Private Key for your GenoaPay sandbox account.'),
-                        'name' => 'LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY',
+                        'name' => self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY,
                     ),
                     array(
                         'type' => 'select',
                         'label' => $this->l('Environment'),
-                        'name' => 'LATITUDE_FINANCE_ENVIRONMENT',
+                        'name' => self::ENVIRONMENT,
                         'col' => 4,
                         'options' => array(
                             'query' => $this->getEnvironments(),
@@ -329,23 +470,48 @@ class Latitude_Official extends PaymentModule
         );
     }
 
-    /**
-     * @todo: Read the data from the API
-     */
     public function getConfigFieldsValues()
     {
         return array(
-            'LATITUDE_FINANCE_TITLE' => Tools::getValue('LATITUDE_FINANCE_TITLE', Configuration::get('LATITUDE_FINANCE_TITLE')),
-            'LATITUDE_FINANCE_DESCRIPTION' => Tools::getValue('LATITUDE_FINANCE_DESCRIPTION', Configuration::get('LATITUDE_FINANCE_DESCRIPTION')),
-            'LATITUDE_FINANCE_DEBUG_MODE' => Tools::getValue('LATITUDE_FINANCE_DEBUG_MODE', Configuration::get('LATITUDE_FINANCE_DEBUG_MODE')),
-            'LATITUDE_FINANCE_MIN_ORDER_TOTAL' => Tools::getValue('LATITUDE_FINANCE_MIN_ORDER_TOTAL', Configuration::get('LATITUDE_FINANCE_MIN_ORDER_TOTAL')),
-            'LATITUDE_FINANCE_MAX_ORDER_TOTAL' => Tools::getValue('LATITUDE_FINANCE_MAX_ORDER_TOTAL', Configuration::get('LATITUDE_FINANCE_MAX_ORDER_TOTAL')),
+            self::LATITUDE_FINANCE_TITLE => Tools::getValue(self::LATITUDE_FINANCE_TITLE, Configuration::get(self::LATITUDE_FINANCE_TITLE)),
+            self::LATITUDE_FINANCE_DESCRIPTION => Tools::getValue(self::LATITUDE_FINANCE_DESCRIPTION, Configuration::get(self::LATITUDE_FINANCE_DESCRIPTION)),
+            self::LATITUDE_FINANCE_DEBUG_MODE => Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE, Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)),
+            self::ENVIRONMENT => Tools::getValue(self::ENVIRONMENT, Configuration::get(self::ENVIRONMENT)),
+            self::LATITUDE_FINANCE_MIN_ORDER_TOTAL => Tools::getValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, Configuration::get(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL)),
+            self::LATITUDE_FINANCE_MAX_ORDER_TOTAL => Tools::getValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, Configuration::get(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL)),
+            self::LATITUDE_FINANCE_PUBLIC_KEY => Tools::getValue(self::LATITUDE_FINANCE_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_PUBLIC_KEY)),
+            self::LATITUDE_FINANCE_PRIVATE_KEY => Tools::getValue(self::LATITUDE_FINANCE_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY)),
+            self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY => Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY)),
+            self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY => Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY)),
         );
     }
 
+    /**
+     * @todo: Dynamic payment gateway by store currency
+     */
     protected function postProcess()
     {
+        try {
+            $configuration = $this->getConfiguration();
+        } catch (Exception $e) {
+            $this->errors[] = $e->getMessage();
+        }
+
         if (Tools::isSubmit('submitSave')) {
+            // The data fetched from Latitude Finance API
+            Configuration::updateValue(self::LATITUDE_FINANCE_TITLE, $this->getConfigData('name', $configuration, 'LatitudePay'));
+            Configuration::updateValue(self::LATITUDE_FINANCE_DESCRIPTION, $this->getConfigData('description', $configuration, 'LatitudePay'));
+            Configuration::updateValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, $this->getConfigData('minimumAmount', $configuration, 'LatitudePay'));
+            Configuration::updateValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, $this->getConfigData('maximumAmount', $configuration, 'LatitudePay'));
+
+            // The values set by the shop owner
+            Configuration::updateValue(self::LATITUDE_FINANCE_DEBUG_MODE, Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE));
+            Configuration::updateValue(self::ENVIRONMENT, Tools::getValue(self::ENVIRONMENT));
+            Configuration::updateValue(self::LATITUDE_FINANCE_PUBLIC_KEY, Tools::getValue(self::LATITUDE_FINANCE_PUBLIC_KEY));
+            Configuration::updateValue(self::LATITUDE_FINANCE_PRIVATE_KEY, Tools::getValue(self::LATITUDE_FINANCE_PRIVATE_KEY));
+            Configuration::updateValue(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY, Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY));
+            Configuration::updateValue(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY, Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY));
+
             if (Configuration::updateValue('latitude_offical', (int)Tools::getValue('latitude_offical'))) {
                 return $this->displayConfirmation($this->l('Settings updated'));
             } else {
@@ -354,54 +520,9 @@ class Latitude_Official extends PaymentModule
         }
     }
 
-    // public function getOfflinePaymentOption()
-    // {
-    //     $offlineOption = new PaymentOption();
-    //     $offlineOption->setCallToActionText($this->l('Pay offline'))
-    //                   ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true))
-    //                   ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
-    //                   ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
-
-    //     return $offlineOption;
-    // }
-
-    // public function getExternalPaymentOption()
-    // {
-    //     $externalOption = new PaymentOption();
-    //     $externalOption->setCallToActionText($this->l('Pay external'))
-    //                    ->setAction($this->context->link->getModuleLink($this->name, 'validation', array(), true))
-    //                    ->setInputs([
-    //                         'token' => [
-    //                             'name' =>'token',
-    //                             'type' =>'hidden',
-    //                             'value' =>'12345689',
-    //                         ],
-    //                     ])
-    //                    ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
-    //                    ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
-
-    //     return $externalOption;
-    // }
-
-    // public function getEmbeddedPaymentOption()
-    // {
-    //     $embeddedOption = new PaymentOption();
-    //     $embeddedOption->setCallToActionText($this->l('Pay embedded'))
-    //                    ->setForm($this->generateForm())
-    //                    ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
-    //                    ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
-
-    //     return $embeddedOption;
-    // }
-
-    // public function getIframePaymentOption()
-    // {
-    //     $iframeOption = new PaymentOption();
-    //     $iframeOption->setCallToActionText($this->l('Pay iframe'))
-    //                  ->setAction($this->context->link->getModuleLink($this->name, 'iframe', array(), true))
-    //                  ->setAdditionalInformation($this->context->smarty->fetch('module:paymentexample/views/templates/front/payment_infos.tpl'))
-    //                  ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_.$this->name.'/payment.jpg'));
-
-    //     return $iframeOption;
-    // }
+    protected function getConfigData($key, $array, $default = '')
+    {
+        $value = isset($array[$key]) ? $array[$key] : $default;
+        return $value;
+    }
 }

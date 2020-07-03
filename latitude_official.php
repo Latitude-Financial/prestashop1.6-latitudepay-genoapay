@@ -109,6 +109,7 @@ class Latitude_Official extends PaymentModule
         $this->currencies_mode = 'checkbox';
 
         $this->configuration = [];
+        $this->gateway = $this->getGateway();
 
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
@@ -173,8 +174,8 @@ class Latitude_Official extends PaymentModule
     public function getConfiguration()
     {
         // initialize payment gateway
-        $gateway = $this->getGateway();
-        // die(get_class($gateway));
+        $this->gateway = $gateway = $this->getGateway();
+
         if (!$gateway) {
             throw new Exception('The payment gateway cannot been initialized.');
         }
@@ -223,10 +224,14 @@ class Latitude_Official extends PaymentModule
 
     public function getGateway()
     {
+        if (isset($this->gateway)) {
+            return $this->gateway;
+        }
+
         try {
             $className = (isset(explode('_', $this->gatewayName)[1])) ? ucfirst(explode('_', $this->gatewayName)[1]) : ucfirst($this->gatewayName);
             // @todo: validate credentials coming back from the account
-            $gateway = BinaryPay::getGateway($className, $this->getCredentials());
+            $this->gateway = BinaryPay::getGateway($className, $this->getCredentials());
         } catch (BinaryPay_Exception $e) {
             $this->errors[] =  $this->l($className .': '. $e->getMessage());
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
@@ -235,16 +240,16 @@ class Latitude_Official extends PaymentModule
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
         }
 
-        if (!isset($gateway)) {
+        if (!isset($this->gateway)) {
             throw new Exception('The gateway object did not initialized correctly.');
         }
 
         // log everything
         if (Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)) {
-            $gateway->setConfig(['debug' => true]);
+            $this->gateway->setConfig(['debug' => true]);
         }
 
-        return $gateway;
+        return $this->gateway;
     }
 
     public function hookPayment($params)

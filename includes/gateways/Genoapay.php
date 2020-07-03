@@ -270,7 +270,10 @@ class Genoapay extends BinaryPay
             ],
             "shippingLines" => $args[BinaryPay_Variable::SHIPPING_LINES]
         );
-
+        echo "<pre>";
+        print_r($request);
+        echo "</pre>";
+        die();
         // signature
         $signature = hash_hmac('sha256', base64_encode($this->recursiveImplode($request, '', true)), $this->getConfig('password'));
 

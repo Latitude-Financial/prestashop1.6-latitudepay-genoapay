@@ -112,7 +112,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             // echo "</pre>";
             // die();
             $response = $gateway->purchase($payment);
-
+            $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
         //     $purchaseUrl    = wc_latitudefinance_get_array_data('paymentUrl', $response);
         //     // Save token into the session
         //     $this->get_checkout_session()->set('purchase_token', wc_latitudefinance_get_array_data('token', $response));
@@ -121,12 +121,14 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             die($e->getMessage());
             // throw new Exception($e->getMessage());
         } catch (Exception $e) {
+            die($e->getMessage());
         //     $message = $e->getMessage() ?: 'Something massively went wrong. Please try again. If the problem still exists, please contact us';
         //     BinaryPay::log($message, true, 'woocommerce-genoapay.log');
         //     throw new Exception($message);
         }
         return $purchaseUrl;
     }
+
 
     protected function getReferenceNumber()
     {
@@ -152,14 +154,20 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
      */
     protected function getShippingData()
     {
+        // handling fee + shipping fee
         $currencyCode = $this->context->currency->iso_code;
+        $id_lang = Configuration::get('PS_LANG_DEFAULT');
+        $carrier = new Carrier($this->context->cart->id_carrier, $id_lang);
+        // Tax rule group 0 is the "No Tax" group
+        $taxIncluded = ($carrier->id_tax_rules_group === 0) ? 0 : 1;
+
         $shippingDetail = [
-            'carrier' => 'free_shipping',
+            'carrier' => $carrier->name,
             'price' => [
-                'amount' => 0,
+                'amount' => $this->context->cart->getTotalShippingCost(),
                 'currency' => $currencyCode
             ],
-            'taxIncluded' => 0
+            'taxIncluded' => $taxIncluded
         ];
         return $shippingDetail;
     }

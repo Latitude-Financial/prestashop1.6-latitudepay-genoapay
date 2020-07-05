@@ -554,7 +554,7 @@ class Latitude_Official extends PaymentModule
         return true;
     }
 
-    protected function getConfigData($key, $array, $default = '')
+    public function getConfigData($key, $array, $default = '')
     {
         $value = isset($array[$key]) ? $array[$key] : $default;
         return $value;

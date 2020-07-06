@@ -5,7 +5,10 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     public $ssl = false;
     public $display_column_left = false;
 
-    protected $returnUrl = _PS_BASE_URL_ . '/return';
+    /**
+     * @var string
+     */
+    protected $returnUrl = _PS_BASE_URL_ . '/module/latitude_official/return';
 
     /**
      * @var string
@@ -22,6 +25,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         $errors = [];
         $purchaseUrl = '';
         $cart = $this->context->cart;
+        $currency = $this->context->currency;
 
         if (!$this->module->checkCurrency($cart))
             Tools::redirect('index.php?controller=order');
@@ -39,31 +43,40 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'currencies' => $this->module->getCurrency((int)$cart->id_currency),
             'total' => $cart->getOrderTotal(true, Cart::BOTH),
             'isoCode' => $this->context->language->iso_code,
-            // 'apikey' => $this->module->chequeName,
-            // 'apiPassword' => Tools::nl2br($this->module->address),
-            'this_path' => $this->module->getPathUri(),
-            'this_path_cheque' => $this->module->getPathUri(),
-            'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
+            // 'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
             'purchase_url' => $purchaseUrl,
+            'payment_method' => Configuration::get(Latitude_Official::LATITUDE_FINANCE_TITLE),
+            'payment_description' => Configuration::get(Latitude_Official::LATITUDE_FINANCE_DESCRIPTION),
+            'currency_code' => $currency->iso_code,
+            'currency_symbol' => $currency->sign,
+            'splited_payment' => Tools::ps_round($cart->getOrderTotal() / 10, (int) $currency->decimals * _PS_PRICE_DISPLAY_PRECISION_),
+            'payment_checkout_logo' => $this->getPaymentCheckoutLogo(),
         ));
 
-        // echo "<pre>";
-        // var_dump(array(
-        //     'nbProducts' => $cart->nbProducts(),
-        //     'cust_currency' => $cart->id_currency,
-        //     'currencies' => $this->module->getCurrency((int)$cart->id_currency),
-        //     'total' => $cart->getOrderTotal(true, Cart::BOTH),
-        //     'isoCode' => $this->context->language->iso_code,
-        //     // 'apikey' => $this->module->chequeName,
-        //     // 'apiPassword' => Tools::nl2br($this->module->address),
-        //     'this_path' => $this->module->getPathUri(),
-        //     'this_path_cheque' => $this->module->getPathUri(),
-        //     'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
-        //     'purchase_url' => $this->getPurchaseUrl(),
-        // ));
-        // echo "</pre>";
 
         $this->setTemplate('payment_execution.tpl');
+    }
+
+    /**
+     * [getPaymentCheckoutLogo description]
+     * @return string
+     */
+    protected function getPaymentCheckoutLogo()
+    {
+        $logo = '';
+        $currencyCode = $this->context->currency->iso_code;
+        switch ($currencyCode) {
+            case 'AUD':
+                $logo = 'latitudepay_checkout.svg';
+                break;
+            case 'NZD':
+                $logo = 'genoapay_checkout.svg';
+                break;
+            default:
+                throw new Exception('Unsupported currency code. Please change your currency code to AUD or NZD.');
+                break;
+        }
+        return _PS_BASE_URL_ . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
     }
 
     // @todo: implment the actual logic
@@ -107,10 +120,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                     $this->getShippingData()
                 ]
             );
-            // echo "<pre>";
-            // var_dump($payment);
-            // echo "</pre>";
-            // die();
+
             $response = $gateway->purchase($payment);
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
         //     $purchaseUrl    = wc_latitudefinance_get_array_data('paymentUrl', $response);
@@ -129,10 +139,15 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         return $purchaseUrl;
     }
 
-
+    /**
+     * @return string
+     */
     protected function getReferenceNumber()
     {
-        return '100012';
+        do {
+            $reference = Order::generateReference();
+        } while (Order::getByReference($reference)->count());
+        return $reference;
     }
 
     protected function getFullAddress()

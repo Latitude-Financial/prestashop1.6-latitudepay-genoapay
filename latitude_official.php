@@ -356,7 +356,7 @@ class Latitude_Official extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Title'),
                         'desc'  => $this->l('This controls the title which the user sees during checkout.'),
-                        'name' => 'LATITUDE_FINANCE_TITLE',
+                        'name' => self::LATITUDE_FINANCE_TITLE,
                     ),
                     array(
                         'type' => 'textarea',
@@ -480,12 +480,12 @@ class Latitude_Official extends PaymentModule
     public function getConfigFieldsValues()
     {
         return array(
-            self::LATITUDE_FINANCE_TITLE => Tools::getValue(self::LATITUDE_FINANCE_TITLE, Configuration::get(self::LATITUDE_FINANCE_TITLE)),
-            self::LATITUDE_FINANCE_DESCRIPTION => Tools::getValue(self::LATITUDE_FINANCE_DESCRIPTION, Configuration::get(self::LATITUDE_FINANCE_DESCRIPTION)),
+            self::LATITUDE_FINANCE_TITLE => Configuration::get(self::LATITUDE_FINANCE_TITLE),
+            self::LATITUDE_FINANCE_DESCRIPTION => Configuration::get(self::LATITUDE_FINANCE_DESCRIPTION),
             self::LATITUDE_FINANCE_DEBUG_MODE => Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE, Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)),
             self::ENVIRONMENT => Tools::getValue(self::ENVIRONMENT, Configuration::get(self::ENVIRONMENT)),
-            self::LATITUDE_FINANCE_MIN_ORDER_TOTAL => Tools::getValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, Configuration::get(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL)),
-            self::LATITUDE_FINANCE_MAX_ORDER_TOTAL => Tools::getValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, Configuration::get(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL)),
+            self::LATITUDE_FINANCE_MIN_ORDER_TOTAL => Configuration::get(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL),
+            self::LATITUDE_FINANCE_MAX_ORDER_TOTAL => Configuration::get(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL),
             self::LATITUDE_FINANCE_PUBLIC_KEY => Tools::getValue(self::LATITUDE_FINANCE_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_PUBLIC_KEY)),
             self::LATITUDE_FINANCE_PRIVATE_KEY => Tools::getValue(self::LATITUDE_FINANCE_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY)),
             self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY => Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY)),
@@ -506,10 +506,10 @@ class Latitude_Official extends PaymentModule
 
         if (Tools::isSubmit('submitSave')) {
             // The data fetched from Latitude Finance API
-            Configuration::updateValue(self::LATITUDE_FINANCE_TITLE, $this->getConfigData('name', $configuration, 'LatitudePay'));
-            Configuration::updateValue(self::LATITUDE_FINANCE_DESCRIPTION, $this->getConfigData('description', $configuration, 'LatitudePay'));
-            Configuration::updateValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, $this->getConfigData('minimumAmount', $configuration, 'LatitudePay'));
-            Configuration::updateValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, $this->getConfigData('maximumAmount', $configuration, 'LatitudePay'));
+            Configuration::updateValue(self::LATITUDE_FINANCE_TITLE, $this->getConfigData('name', $configuration));
+            Configuration::updateValue(self::LATITUDE_FINANCE_DESCRIPTION, $this->getConfigData('description', $configuration));
+            Configuration::updateValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, $this->getConfigData('minimumAmount', $configuration, 20));
+            Configuration::updateValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, $this->getConfigData('maximumAmount', $configuration, 1500));
 
             // The values set by the shop owner
             Configuration::updateValue(self::LATITUDE_FINANCE_DEBUG_MODE, Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE));

@@ -138,7 +138,7 @@ class Latitude_Official extends PaymentModule
         $this->gateway = $this->getGateway();
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
-        $this->description = $this->l('Available to NZ residents who are 18 years old and over and have a valid debit or credit card.');
+        $this->description = $this->l('Available to NZ and OZ residents who are 18 years old and over and have a valid debit or credit card.');
         $this->confirmUninstall = $this->l('Are you sure you to uninstall the module?');
 
         /**

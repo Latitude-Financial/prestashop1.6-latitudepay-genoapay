@@ -201,12 +201,15 @@ class Latitude_Official extends PaymentModule
         switch ($environment) {
             case self::ENVIRONMENT_SANDBOX:
             case self::ENVIRONMENT_DEVELOPMENT:
-                $publicKey = Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY);
-                $privateKey = Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY);
+                /**
+                 * retrieve the correct configuration base on the current public and private key pair
+                 */
+                $publicKey = Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY));
+                $privateKey = Tools::getValue(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY));
                 break;
             case self::ENVIRONMENT_PRODUCTION:
-                $publicKey = Configuration::get(self::LATITUDE_FINANCE_PUBLIC_KEY);
-                $privateKey = Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY);
+                $publicKey = Tools::getValue(self::LATITUDE_FINANCE_PUBLIC_KEY, Configuration::get(self::LATITUDE_FINANCE_PUBLIC_KEY));
+                $privateKey = Tools::getValue(self::LATITUDE_FINANCE_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY));
                 break;
             default:
                 throw new Exception('Failed to get credentials because the environment value is not correct.');

@@ -7,6 +7,16 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
      * @var integer - Order state
      */
     const PAYMENT_ACCEPECTED = 2;
+    const PAYMENT_ERROR = 8;
+
+    const PAYMENT_SUCCESS_STATES = [
+        'COMPLETED'
+    ];
+
+    const PAYMENT_FAILED_STATES = [
+        'UNKNOWN',
+        'FAILED'
+    ];
 
     /**
      * [initContent description]
@@ -15,8 +25,11 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
     public function initContent()
     {
         parent::initContent();
-
-        //  public function validateOrder($id_cart, $id_order_state, $amount_paid, $payment_method = 'Unknown', $message = null, $extra_vars = array(), $currency_special = null, $dont_touch_amount = false, $secure_key = false, Shop $shop = null)
+        // Add the validation
+        $reference = Tools::getValue('reference');
+        if (!$this->context->cookie->reference || $this->context->cookie->reference !== $reference) {
+            Tools::redirect(Context::getContext()->shop->getBaseURL(true));
+        }
 
         // validate the request and place the order or return to shopping cart page
         // base on the response
@@ -31,13 +44,10 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         //     [controller] => return
         //     [fc] => module
         // )
-        // echo "<pre>";
         // print_r(Tools::getValue('result'));
-        // print_r(Tools::getValue('signature'));
-        // print_r(Tools::getValue('token'));
-        // print_r(Tools::getValue('reference'));
-
-        if (Tools::getValue('result') === 'COMPLETED') {
+        $responseState = Tools::getValue('result');
+        // success
+        if (in_array($responseState, self::PAYMENT_SUCCESS_STATES)) {
             $this->module->validateOrder(
                 $this->context->cart->id,
                 self::PAYMENT_ACCEPECTED,
@@ -48,24 +58,35 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
                     'transaction_id' => Tools::getValue('token')
                 )
             );
-
-            $id_order = Order::getOrderByCartId($this->context->cart->id);
-            $url = Context::getContext()->link->getPageLink(
-                'order-confirmation',
-                true,
-                null,
+        } elseif (in_array($responseState, self::PAYMENT_FAILED_STATES)) {
+            $this->module->validateOrder(
+                $this->context->cart->id,
+                self::PAYMENT_ERROR,
+                $this->context->cart->getOrderTotal(),
+                'Latitude Finance',
+                '',
                 array(
-                    'id_cart' => (int)$this->context->cart->id,
-                    'id_module' => (int)$this->module->id,
-                    'id_order' => (int)$id_order,
-                    'key' => $returnValues['secure_key']
+                    'transaction_id' => Tools::getValue('token')
                 )
             );
-
-            Tools::redirect($url);
+        } else {
+            // For cancel
+            Tool::redirect('order');
         }
 
-        // echo "</pre>";
-        // die('123123123');
+        $id_order = Order::getOrderByCartId($this->context->cart->id);
+        $url = Context::getContext()->link->getPageLink(
+            'order-confirmation',
+            true,
+            null,
+            array(
+                'id_cart' => (int)$this->context->cart->id,
+                'id_module' => (int)$this->module->id,
+                'id_order' => (int)$id_order,
+                'key' => $returnValues['secure_key']
+            )
+        );
+
+        Tools::redirect($url);
     }
 }

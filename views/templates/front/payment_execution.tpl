@@ -11,10 +11,10 @@
 
     <div style="margin-bottom: 10px">
     {if $currency_code === 'NZD'}
-        <img src="{$payment_checkout_logo}" alt="GenoaPay" />
+        <img src="{$payment_checkout_logo}" id="genoapay-popup" alt="GenoaPay" style="cusor: pointer;"/>
         <b>10 interest free payments from {$currency_symbol}{$splited_payment}</b>
     {elseif $currency_code === 'AUD'}
-        <img src="{$payment_checkout_logo}" alt="LatitudePay" />
+        <img src="{$payment_checkout_logo}" id="latitudepay-popup" alt="LatitudePay" style="cusor: pointer;" />
         <b>10 interest free payments from {$currency_symbol}{$splited_payment}</b>
     {/if}
     </div>
@@ -23,3 +23,9 @@
         <a href="{$link->getPageLink('order', true, NULL, "step=3")|escape:'html'}" class="button_large">{l s='Other payment methods' mod='latitude_official'}</a>
     </p>
 </form>
+
+{if $currency_code === 'NZD'}
+    {include file="./genoapay_payment_modal.tpl"}
+{else if $currency_code === 'AUD'}
+    {include file="./latitudepay_payment_modal.tpl"}
+{/if}

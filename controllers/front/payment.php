@@ -15,6 +15,13 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
      */
     const DEFAULT_VALUE = 'NO_VALUE';
 
+    public function setMedia()
+    {
+        parent::setMedia();
+        Tools::addCSS($this->module->getPathUri() . '/views/css/genoapay.css');
+        Tools::addCSS($this->module->getPathUri() . '/views/css/latitudepay.css');
+    }
+
     /**
      * @see FrontController::initContent()
      */
@@ -51,6 +58,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'currency_symbol' => $currency->sign,
             'splited_payment' => Tools::ps_round($cart->getOrderTotal() / 10, (int) $currency->decimals * _PS_PRICE_DISPLAY_PRECISION_),
             'payment_checkout_logo' => $this->getPaymentCheckoutLogo(),
+            'current_module_uri' => $this->module->getPathUri()
         ));
 
 
@@ -89,6 +97,9 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         //     $session    = $this->get_checkout_session();
             $gateway    = $this->module->getGateway();
             $reference  = $this->getReferenceNumber();
+            // Save the reference for validation when response coming back from
+            $cookie->reference = $reference;
+
             $cart       = $this->context->cart;
             $amount     = $cart->getOrderTotal();
             $customer   = $this->context->customer;

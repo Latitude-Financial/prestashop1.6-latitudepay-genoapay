@@ -34,8 +34,11 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         $cart = $this->context->cart;
         $currency = $this->context->currency;
 
-        if (!$this->module->checkCurrency($cart))
-            Tools::redirect('index.php?controller=order');
+        /**
+         * @todo: support the backend currency and country registration
+         */
+        // if (!$this->module->checkCurrency($cart))
+        //     Tools::redirect('index.php?controller=order');
 
         try {
             $purchaseUrl = $this->getPurchaseUrl();
@@ -94,8 +97,10 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
 
         try {
             $cookie = $this->getCookie();
+            $currency   = $this->context->currency;
+            $paymentGatewayName = $this->module->getPaymentGatewayNameByCurrencyCode($currency->iso_code);
         //     $session    = $this->get_checkout_session();
-            $gateway    = $this->module->getGateway();
+            $gateway    = $this->module->getGateway($paymentGatewayName);
             $reference  = $this->getReferenceNumber();
             // Save the reference for validation when response coming back from
             $cookie->reference = $reference;
@@ -103,7 +108,6 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $cart       = $this->context->cart;
             $amount     = $cart->getOrderTotal();
             $customer   = $this->context->customer;
-            $currency   = $this->context->currency;
             $address    = new Address($cart->id_address_delivery);
 
             $payment = array(
@@ -131,6 +135,11 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                     $this->getShippingData()
                 ]
             );
+
+            // echo "<pre>";
+            // var_dump($payment);
+            // echo "</pre>";
+            // die();
 
             $response = $gateway->purchase($payment);
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);

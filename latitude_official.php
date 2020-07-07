@@ -17,6 +17,16 @@ class Latitude_Official extends PaymentModule
     /**
      * @var string
      */
+    public $gatewayName = '';
+
+    /**
+     * @var object
+     */
+    public $gateway = '';
+
+    /**
+     * @var string
+     */
     const ENVIRONMENT_DEVELOPMENT = 'development';
 
     /**
@@ -67,6 +77,15 @@ class Latitude_Official extends PaymentModule
      */
     const LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY = 'LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY';
 
+    /**
+    * List of hooks needed in this module
+    * @var array
+    */
+    public $hooks = array(
+        'payment',
+        'paymentReturn',
+        'orderConfirmation',
+    );
 
     public function __construct()
     {
@@ -75,7 +94,6 @@ class Latitude_Official extends PaymentModule
          * @var string
          */
         $this->name = 'latitude_official';
-        $this->gatewayName = 'genoapay';
 
         /**
          * The title for the section that shall contain this module in PrestaShop's back office modules list.
@@ -109,10 +127,15 @@ class Latitude_Official extends PaymentModule
         $this->currencies_mode = 'checkbox';
 
         $this->configuration = [];
-        $this->gateway = $this->getGateway();
 
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
+
+        if (!count(Currency::checkPaymentCurrencies($this->id))) {
+            $this->warning = $this->l('No currency has been set for this module.');
+        }
+        $this->gatewayName = $this->getPaymentGatewayNameByCurrencyCode();
+        $this->gateway = $this->getGateway();
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ residents who are 18 years old and over and have a valid debit or credit card.');
@@ -124,10 +147,6 @@ class Latitude_Official extends PaymentModule
         if (is_callable('curl_init') === false) {
             $this->errors[] = $this->l('To be able to use this module, please activate cURL (PHP extension).');
         }
-
-        if (!count(Currency::checkPaymentCurrencies($this->id))) {
-            $this->warning = $this->l('No currency has been set for this module.');
-        }
     }
 
     /**
@@ -137,6 +156,9 @@ class Latitude_Official extends PaymentModule
      */
     public function install()
     {
+        /**
+         * @todo: remove the hard code, use the hooks array to automate the registerHook process
+         */
         if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn')) {
              return false;
          }
@@ -225,14 +247,53 @@ class Latitude_Official extends PaymentModule
         return $credentials;
     }
 
-    public function getGateway()
+    public function getPaymentGatewayNameByCurrencyCode($currencyCode = null)
     {
-        if (isset($this->gateway)) {
+        $countryToCurrencyCode = [
+            'NZ' => 'NZD',
+            'AU' => 'AUD',
+        ];
+
+        /**
+         * If the currency object still not initialized then use the country object as the default setting
+         */
+        if (!$currencyCode) {
+            $countryCode = $this->context->country->iso_code;
+            if (!isset($countryToCurrencyCode[$countryCode])) {
+                throw new Expcetion(sprintf("The country code: %s cannot to map with a supported currency code.", $countryCode));
+            }
+
+            $currencyCode = $countryToCurrencyCode[$countryCode];
+        }
+
+        $gatewayName = '';
+        switch ($currencyCode) {
+            case 'AUD':
+                $gatewayName = 'Latitudepay';
+                break;
+            case 'NZD':
+                $gatewayName = 'Genoapay';
+                break;
+            default:
+                throw new Exception("The extension does not support for the current currency for the shop.");
+                break;
+        }
+
+        return $gatewayName;
+    }
+
+    public function getGateway($gatewayName = null)
+    {
+        if ($this->gateway instanceof BinaryPay && null === $gatewayName) {
             return $this->gateway;
         }
 
+        if (!$gatewayName) {
+            $gatewayName = $this->gatewayName;
+        }
+
         try {
-            $className = (isset(explode('_', $this->gatewayName)[1])) ? ucfirst(explode('_', $this->gatewayName)[1]) : ucfirst($this->gatewayName);
+            $className = (isset(explode('_', $gatewayName)[1])) ? ucfirst(explode('_', $gatewayName)[1]) : ucfirst($gatewayName);
             // @todo: validate credentials coming back from the account
             $this->gateway = BinaryPay::getGateway($className, $this->getCredentials());
         } catch (BinaryPay_Exception $e) {
@@ -243,7 +304,7 @@ class Latitude_Official extends PaymentModule
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
         }
 
-        if (!isset($this->gateway)) {
+        if (!$this->gateway) {
             throw new Exception('The gateway object did not initialized correctly.');
         }
 
@@ -255,9 +316,14 @@ class Latitude_Official extends PaymentModule
         return $this->gateway;
     }
 
+    /**
+     * Triggered when user enter the payment step in frontend
+     */
     public function hookPayment($params)
     {
         $cartAmount = $params['cart']->getOrderTotal();
+        $currency = new Currency($params['cart']->id_currency);
+        $this->gatewayName = $this->getPaymentGatewayNameByCurrencyCode($currency->iso_code);
 
         if (!$this->active || !$this->isOrderAmountAvailable($cartAmount)) {
             return;
@@ -272,17 +338,39 @@ class Latitude_Official extends PaymentModule
             ));
         }
 
-        if (!$this->checkCurrency($params['cart'])) {
-            return;
-        }
+        /**
+         * @todo: support the backend currency and country registration
+         */
+        // if (!$this->checkCurrency($params['cart'])) {
+        //     return;
+        // }
 
         $this->smarty->assign(array(
             'this_path' => $this->_path,
-            'logo' => _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg',
+            'logo' => $this->getPaymentLogo(),
+            'payment_name' => $this->gatewayName,
+            'splited_payment' => $currency->sign . Tools::ps_round($cartAmount / 10, (int) $currency->decimals * _PS_PRICE_DISPLAY_PRECISION_),
             'this_path_ssl' => Tools::getShopDomain(true, true) . __PS_BASE_URI__ . 'modules/'.$this->name.'/',
         ));
 
         return $this->display(__FILE__, 'payment.tpl');
+    }
+
+    protected function getPaymentLogo()
+    {
+        $paymentLogo = '';
+        switch ($this->gatewayName) {
+            case 'Genoapay':
+                $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg';
+                break;
+            case 'Latitudepay':
+                $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/latitudepay.svg';
+                break;
+            default:
+                throw new Exception("Failed to get the payment logo from the current gateway name.");
+                break;
+        }
+        return $paymentLogo;
     }
 
     /**
@@ -299,7 +387,10 @@ class Latitude_Official extends PaymentModule
         if (!$this->active) {
             return;
         }
-
+        // echo "<pre>";
+        // var_dump($params);
+        // echo "</pre>";
+        // die('1231231321');
         // return $this->fetch('module:latitude_official/views/templates/hook/payment_return.tpl');
     }
 

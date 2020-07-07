@@ -12,10 +12,10 @@
     <div style="margin-bottom: 10px">
     {if $currency_code === 'NZD'}
         <img src="{$payment_checkout_logo}" id="genoapay-popup" alt="GenoaPay" style="cursor: pointer;"/>
-        <b>10 interest free payments from {$currency_symbol}{$splited_payment}</b>
+        <b>{l s="10 interest free payments from"} {$currency_symbol}{$splited_payment}</b>
     {elseif $currency_code === 'AUD'}
         <img src="{$payment_checkout_logo}" id="latitudepay-popup" alt="LatitudePay" style="cursor: pointer;" />
-        <b>10 interest free payments from {$currency_symbol}{$splited_payment}</b>
+        <b>{l s="10 interest free payments from"} {$currency_symbol}{$splited_payment}</b>
     {/if}
     </div>
     <p class="cart_navigation" id="cart_navigation">

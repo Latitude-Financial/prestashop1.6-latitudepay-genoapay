@@ -27,9 +27,12 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         parent::initContent();
         // Add the validation
         $reference = Tools::getValue('reference');
+
         if (!$this->context->cookie->reference || $this->context->cookie->reference !== $reference) {
             Tools::redirect(Context::getContext()->shop->getBaseURL(true));
         }
+
+        $cart = $this->context->cart;
 
         // validate the request and place the order or return to shopping cart page
         // base on the response
@@ -49,9 +52,9 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         // success
         if (in_array($responseState, self::PAYMENT_SUCCESS_STATES)) {
             $this->module->validateOrder(
-                $this->context->cart->id,
+                $cart->id,
                 self::PAYMENT_ACCEPECTED,
-                $this->context->cart->getOrderTotal(),
+                $cart->getOrderTotal(),
                 'Latitude Finance',
                 '',
                 array(
@@ -60,9 +63,9 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             );
         } elseif (in_array($responseState, self::PAYMENT_FAILED_STATES)) {
             $this->module->validateOrder(
-                $this->context->cart->id,
+                $cart->id,
                 self::PAYMENT_ERROR,
-                $this->context->cart->getOrderTotal(),
+                $cart->getOrderTotal(),
                 'Latitude Finance',
                 '',
                 array(
@@ -74,19 +77,11 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             Tool::redirect('order');
         }
 
-        $id_order = Order::getOrderByCartId($this->context->cart->id);
-        $url = Context::getContext()->link->getPageLink(
-            'order-confirmation',
-            true,
-            null,
-            array(
-                'id_cart' => (int)$this->context->cart->id,
-                'id_module' => (int)$this->module->id,
-                'id_order' => (int)$id_order,
-                'key' => $returnValues['secure_key']
-            )
-        );
+        $customer = new Customer($cart->id_customer);
 
-        Tools::redirect($url);
+        if (!Validate::isLoadedObject($customer))
+            Tools::redirect('index.php?controller=order&step=1');
+
+        Tools::redirect('index.php?controller=order-confirmation&id_cart='. (int)$cart->id. '&id_module=' . (int)$this->module->id . '&id_order=' . $this->module->currentOrder. '&key=' . $customer->secure_key);
     }
 }

@@ -84,7 +84,8 @@ class Latitude_Official extends PaymentModule
     public $hooks = array(
         'payment',
         'paymentReturn',
-        'orderConfirmation',
+        'displayProductPriceBlock',
+        'displayProductAdditionalInfo'
     );
 
     public function __construct()
@@ -159,7 +160,7 @@ class Latitude_Official extends PaymentModule
         /**
          * @todo: remove the hard code, use the hooks array to automate the registerHook process
          */
-        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn')) {
+        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header')) {
              return false;
          }
          return true;
@@ -176,7 +177,12 @@ class Latitude_Official extends PaymentModule
         return parent::uninstall();
     }
 
-    // @todo: finish the implementation
+    public function hookHeader($params)
+    {
+         $this->context->controller->addCSS($this->_path . '/views/css/genoapay.css');
+         $this->context->controller->addCSS($this->_path . '/views/css/latitudepay.css');
+    }
+
     public function checkApiConnection($publicKey = null, $privateKey = null)
     {
         try {
@@ -373,7 +379,37 @@ class Latitude_Official extends PaymentModule
         return $paymentLogo;
     }
 
-    /**
+    public function hookDisplayProductButtons($params)
+    {
+        $price = $this->context->cart->getOrderTotal();
+        $currencyCode = $this->context->currency->iso_code;
+        $gatewayName = $this->getPaymentGatewayNameByCurrencyCode($currencyCode);
+
+        $containerClass = "wc-latitudefinance-" . strtolower($gatewayName) . "-container";
+        $paymentInfo = $this->l("Available now.");
+
+        if ($price >= 20 && $price <= 1500) {
+           $weekly = $price / 10;
+           $paymentInfo = "10 weekly payments of <strong>$${weekly}</strong>";
+        }
+
+        $color = ($gatewayName == "latitudepay") ? "rgb(57, 112, 255)" : "rgb(49, 181, 156)";
+
+        $this->smarty->assign(array(
+            'container_class' => $containerClass,
+            'color' => $color,
+            'gateway_name' => strtolower($gatewayName),
+            'payment_info' => $paymentInfo,
+            'currency_code' => $currencyCode,
+            'payment_logo' => $this->getPaymentLogo(),
+            'base_dir' => _PS_BASE_URL_.__PS_BASE_URI__,
+            'current_module_uri' => $this->_path
+        ));
+
+        return $this->display(__FILE__, 'product_latitude_finance.tpl');
+    }
+
+    /**`
      * Display a message in the paymentReturn hook
      *
      * @param array $params

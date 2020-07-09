@@ -282,13 +282,13 @@ class Latitude_Official extends PaymentModule
             $currencyCode = $countryToCurrencyCode[$countryCode];
         }
 
-        $gatewayName = '';
+        $this->gatewayName = $gatewayName = '';
         switch ($currencyCode) {
             case 'AUD':
-                $gatewayName = 'Latitudepay';
+                $this->gatewayName = $gatewayName = 'Latitudepay';
                 break;
             case 'NZD':
-                $gatewayName = 'Genoapay';
+                $this->gatewayName = $gatewayName = 'Genoapay';
                 break;
             default:
                 throw new Exception("The extension does not support for the current currency for the shop.");
@@ -386,6 +386,7 @@ class Latitude_Official extends PaymentModule
                 throw new Exception("Failed to get the payment logo from the current gateway name.");
                 break;
         }
+
         return $paymentLogo;
     }
 
@@ -403,7 +404,7 @@ class Latitude_Official extends PaymentModule
            $paymentInfo = "10 weekly payments of <strong>$${weekly}</strong>";
         }
 
-        $color = ($gatewayName == "latitudepay") ? "rgb(57, 112, 255)" : "rgb(49, 181, 156)";
+        $color = ($gatewayName == "Latitudepay") ? "rgb(57, 112, 255)" : "rgb(49, 181, 156)";
 
         $this->smarty->assign(array(
             'container_class' => $containerClass,

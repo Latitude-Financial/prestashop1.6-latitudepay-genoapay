@@ -221,7 +221,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     {
         $items = $this->context->cart->getProducts();
         $currencyCode = $this->context->currency->iso_code;
-        // $isTaxIncluded = ($this->context->cart->getOrderTotal() == $this->context->cart->getOrderTotal(false)) ? 0 : 1;
+        $isTaxIncluded = ($this->context->cart->getOrderTotal() == $this->context->cart->getOrderTotal(false)) ? 0 : 1;
 
         $products = [];
         foreach ($items as $_item) {
@@ -229,15 +229,16 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $product_line_item = [
                 'name'          => $_item->name,
                 'price' => [
-                    'amount'    => $_item->total,
+                    'amount'    => $_item->total_wt,
                     'currency'  => $currencyCode
                 ],
                 'sku'           => $_item->reference,
                 'quantity'      => $_item->quantity,
-                'taxIncluded'   => 0
+                'taxIncluded'   => $isTaxIncluded
             ];
             array_push($products, $product_line_item);
         }
+
         return $products;
     }
 

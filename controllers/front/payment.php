@@ -83,7 +83,12 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         return _PS_BASE_URL_ . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
     }
 
-    // @todo: implment the actual logic
+    /**
+     * @todo: Proper error handling for getPurchaseUrl()
+     * Request the purchase URL by accessing the Latitude Finance API
+     * @see https://api.uat.latitudepay.com/v3/api-doc/index.html#operation/createEcommerceSale
+     * @return string
+     */
     public function getPurchaseUrl()
     {
         $serializeCartObject = serialize($this->context->cart);
@@ -136,23 +141,25 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
 
             $response = $gateway->purchase($payment);
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
-        //     $purchaseUrl    = wc_latitudefinance_get_array_data('paymentUrl', $response);
-        //     // Save token into the session
-        //     $this->get_checkout_session()->set('purchase_token', wc_latitudefinance_get_array_data('token', $response));
         } catch (BinaryPay_Exception $e) {
             BinaryPay::log($e->getMessage(), true, 'latitude-finance.log');
+            /**
+             * @todo: handle the expcetion properly
+             */
             die($e->getMessage());
-            // throw new Exception($e->getMessage());
         } catch (Exception $e) {
+            $message = $e->getMessage() ?: 'Something massively went wrong. Please try again. If the problem still exists, please contact us';
+            BinaryPay::log($message, true, 'latitude-finance.log');
+            /**
+             * @todo: handle the expcetion properly
+             */
             die($e->getMessage());
-        //     $message = $e->getMessage() ?: 'Something massively went wrong. Please try again. If the problem still exists, please contact us';
-        //     BinaryPay::log($message, true, 'woocommerce-genoapay.log');
-        //     throw new Exception($message);
         }
         return $purchaseUrl;
     }
 
     /**
+     * This is how prestashop generate the next order referece number
      * @return string
      */
     protected function getReferenceNumber()
@@ -163,6 +170,10 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
         return $reference;
     }
 
+    /**
+     * Since the address have two address lines so this function is made to merge them as a single string
+     * @return string
+     */
     protected function getFullAddress()
     {
         $addressObject    = new Address($this->context->cart->id_address_delivery);
@@ -177,7 +188,8 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     }
 
     /**
-     * get_shipping_data
+     * Build the shipping line array structure base on latitude finance API documentation
+     * @see  https://api.uat.latitudepay.com/v3/api-doc/index.html#operation/createEcommerceSale
      * @return array
      */
     protected function getShippingData()
@@ -201,7 +213,8 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     }
 
     /**
-     * _getQuoteProducts
+     * Build the products array structure base on latitude finance API documentation
+     * @see  https://api.uat.latitudepay.com/v3/api-doc/index.html#operation/createEcommerceSale
      * @return array
      */
     protected function getQuoteProducts()

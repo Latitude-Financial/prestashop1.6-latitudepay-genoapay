@@ -82,10 +82,9 @@ class Latitude_Official extends PaymentModule
     * @var array
     */
     public $hooks = array(
+        'header',
         'payment',
-        'paymentReturn',
-        'displayProductPriceBlock',
-        'displayProductAdditionalInfo'
+        'displayProductButtons',
     );
 
     public function __construct()
@@ -160,7 +159,7 @@ class Latitude_Official extends PaymentModule
         /**
          * @todo: remove the hard code, use the hooks array to automate the registerHook process
          */
-        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header')) {
+        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header')) {
              return false;
          }
          return true;
@@ -183,6 +182,12 @@ class Latitude_Official extends PaymentModule
          $this->context->controller->addCSS($this->_path . '/views/css/latitudepay.css');
     }
 
+    /**
+     * Check if the Latitude Finance API is avaliable for the web server
+     * @param  string $publicKey
+     * @param  string $privateKey
+     * @return boolean
+     */
     public function checkApiConnection($publicKey = null, $privateKey = null)
     {
         try {
@@ -199,6 +204,11 @@ class Latitude_Official extends PaymentModule
         return true;
     }
 
+    /**
+     * Fetch the configuration from the Latitude Finance API
+     * @see  https://api.uat.latitudepay.com/v3/api-doc/index.html#operation/getConfiguration
+     * @return array
+     */
     public function getConfiguration()
     {
         // initialize payment gateway
@@ -407,27 +417,6 @@ class Latitude_Official extends PaymentModule
         ));
 
         return $this->display(__FILE__, 'product_latitude_finance.tpl');
-    }
-
-    /**`
-     * Display a message in the paymentReturn hook
-     *
-     * @param array $params
-     * @return string
-     */
-    public function hookPaymentReturn($params)
-    {
-        /**
-         * Verify if this module is enabled
-         */
-        if (!$this->active) {
-            return;
-        }
-        // echo "<pre>";
-        // var_dump($params);
-        // echo "</pre>";
-        // die('1231231321');
-        // return $this->fetch('module:latitude_official/views/templates/hook/payment_return.tpl');
     }
 
     public function checkCurrency($cart)
@@ -676,10 +665,7 @@ class Latitude_Official extends PaymentModule
 
     protected function isOrderAmountAvailable($amount)
     {
-        $minOrderTotal = $this->getMinOrderTotal();
-        $maxOrderTotal = $this->getMaxOrderTotal();
-
-        if ($amount > $maxOrderTotal || $amount < $minOrderTotal) {
+        if ($amount > $this->getMaxOrderTotal() || $amount < $this->getMinOrderTotal()) {
             return false;
         }
         return true;

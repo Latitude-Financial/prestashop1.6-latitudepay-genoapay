@@ -392,7 +392,8 @@ class Latitude_Official extends PaymentModule
 
     public function hookDisplayProductButtons($params)
     {
-        $price = $this->context->cart->getOrderTotal();
+        $currency = $this->context->currency;
+        $price = Tools::ps_round($params['product']->getPrice(), (int) $currency->decimals * _PS_PRICE_DISPLAY_PRECISION_);
         $currencyCode = $this->context->currency->iso_code;
         $gatewayName = $this->getPaymentGatewayNameByCurrencyCode($currencyCode);
 
@@ -413,7 +414,7 @@ class Latitude_Official extends PaymentModule
             'payment_info' => $paymentInfo,
             'currency_code' => $currencyCode,
             'payment_logo' => $this->getPaymentLogo(),
-            'base_dir' => _PS_BASE_URL_.__PS_BASE_URI__,
+            'base_dir' => _PS_BASE_URL_ . __PS_BASE_URI__,
             'current_module_uri' => $this->_path
         ));
 

@@ -458,18 +458,12 @@ class Latitude_Official extends PaymentModule
 
     public function renderSettingsForm()
     {
-        // echo "<pre>";
-        // var_dump(Country::getCountries($this->context->language->id, false));
-        // echo "</pre>";
          $fields_form = array(
             'form' => array(
                 'legend' => array(
                     'title' => $this->l('Settings'),
                     'icon' => 'icon-cogs',
                 ),
-                // 'description' => $this->l('Add payment methods on') . ' <a href="?tab=AdminUniPaySystem&token=' . Tools::getAdminToken('AdminUniPaySystem' .
-                //         Tab::getIdFromClassName('AdminUniPaySystem') . $this->context->cookie->id_employee) .
-                //     '" class="link">' . $this->l('Modules > Pay Systems tab') . '</a>',
                 'input' => array(
                     array(
                         'type' => 'text',
@@ -517,25 +511,25 @@ class Latitude_Official extends PaymentModule
                     array(
                         'type' => 'text',
                         'label' => $this->l('API Key'),
-                        'desc'  => $this->l('The Public Key for your GenoaPay account.'),
+                        'desc'  => $this->l('The Public Key for your Genoapay or Latitudepay account.'),
                         'name' => self::LATITUDE_FINANCE_PUBLIC_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('API Secret'),
-                        'desc'  => $this->l('The Private Key for your GenoaPay account.'),
+                        'desc'  => $this->l('The Private Key for your Genoapay or Latitudepay account.'),
                         'name' => self::LATITUDE_FINANCE_PRIVATE_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('Sandbox API Key'),
-                        'desc'  => $this->l('The Public Key for your GenoaPay sandbox account.'),
+                        'desc'  => $this->l('The Public Key for your Genoapay or Latitudepay sandbox account.'),
                         'name' => self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY,
                     ),
                     array(
                         'type' => 'text',
                         'label' => $this->l('Sandbox API Secret'),
-                        'desc'  => $this->l('The Private Key for your GenoaPay sandbox account.'),
+                        'desc'  => $this->l('The Private Key for your Genoapay or Latitudepay sandbox account.'),
                         'name' => self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY,
                     ),
                     array(

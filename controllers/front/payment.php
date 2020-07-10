@@ -94,6 +94,12 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
      */
     public function getPurchaseUrl()
     {
+        /**
+         * Give a default value of the purchase URL
+         * @fix Notice: Undefined variable: purchaseUrl in /var/www/html/modules/latitude_official/controllers/front/payment.php on line 163 when an exception throws
+         * @var string
+         */
+        $purchaseUrl = '';
         $serializeCartObject = serialize($this->context->cart);
 
         try {
@@ -137,6 +143,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                 ]
             );
 
+            throw new Exception('xxxx');
             // echo "<pre>";
             // var_dump($payment);
             // echo "</pre>";
@@ -146,17 +153,11 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
         } catch (BinaryPay_Exception $e) {
             BinaryPay::log($e->getMessage(), true, 'latitude-finance.log');
-            /**
-             * @todo: handle the expcetion properly
-             */
-            die($e->getMessage());
+            $this->errors[] = $e->getMessage();
         } catch (Exception $e) {
             $message = $e->getMessage() ?: 'Something massively went wrong. Please try again. If the problem still exists, please contact us';
             BinaryPay::log($message, true, 'latitude-finance.log');
-            /**
-             * @todo: handle the expcetion properly
-             */
-            die($e->getMessage());
+            $this->errors[] = $message;
         }
         return $purchaseUrl;
     }

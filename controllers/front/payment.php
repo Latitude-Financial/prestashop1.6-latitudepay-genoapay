@@ -232,7 +232,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $product_line_item = [
                 'name'          => $_item->name,
                 'price' => [
-                    'amount'    => $_item->total_wt,
+                    'amount'    => round($_item->total_wt, 2),
                     'currency'  => $currencyCode
                 ],
                 'sku'           => $_item->reference,

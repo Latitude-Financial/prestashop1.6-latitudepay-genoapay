@@ -33,6 +33,7 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         }
 
         $cart = $this->context->cart;
+        $response = Tools::getAllValues();
 
         // validate the request and place the order or return to shopping cart page
         // base on the response
@@ -49,6 +50,8 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         // )
         // print_r(Tools::getValue('result'));
         $responseState = Tools::getValue('result');
+
+
         // success
         if (in_array($responseState, self::PAYMENT_SUCCESS_STATES)) {
             $this->module->validateOrder(
@@ -61,20 +64,27 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
                     'transaction_id' => Tools::getValue('token')
                 )
             );
-        } elseif (in_array($responseState, self::PAYMENT_FAILED_STATES)) {
-            $this->module->validateOrder(
-                $cart->id,
-                self::PAYMENT_ERROR,
-                $cart->getOrderTotal(),
-                'Latitude Finance',
-                '',
-                array(
-                    'transaction_id' => Tools::getValue('token')
-                )
-            );
         } else {
-            // For cancel
-            Tool::redirect('index.php?controller=order&step=1');
+            $message = (is_array($response)) ? json_encode($response) : 'Error response from Latitude Financial services API. The response data cannot be recorded.';
+            // record all the FAILED status order
+            // just in case we lose the response messages and transaction token ID
+            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
+
+            /**
+             * @todo: display the error message after the redirection
+             */
+            $this->errors[] = Tools::getValue('message');
+            Tools::redirect('index.php?controller=order&step=1');
+            // $this->module->validateOrder(
+            //     $cart->id,
+            //     self::PAYMENT_ERROR,
+            //     $cart->getOrderTotal(),
+            //     'Latitude Finance',
+            //     '',
+            //     array(
+            //         'transaction_id' => Tools::getValue('token')
+            //     )
+            // );
         }
 
         $customer = new Customer($cart->id_customer);

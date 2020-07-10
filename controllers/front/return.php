@@ -50,8 +50,6 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         // )
         // print_r(Tools::getValue('result'));
         $responseState = Tools::getValue('result');
-
-
         // success
         if (in_array($responseState, self::PAYMENT_SUCCESS_STATES)) {
             $this->module->validateOrder(

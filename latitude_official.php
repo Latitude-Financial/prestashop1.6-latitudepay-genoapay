@@ -166,14 +166,24 @@ class Latitude_Official extends PaymentModule
     }
 
     /**
-     * Uninstall this module and remove it from all hooks
+     * Uninstall this module and reset all the existing configuration data
      *
      * @return bool
      */
     public function uninstall()
     {
-        // @todo: remove the configurations
-        return parent::uninstall();
+        $result = parent::uninstall();
+        return $result
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_SANDBOX_PUBLIC_KEY)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_SANDBOX_PRIVATE_KEY)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_PUBLIC_KEY)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_PRIVATE_KEY)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_TITLE)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_DESCRIPTION)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL)
+            && Configuration::deleteByName(self::ENVIRONMENT)
+            && Configuration::deleteByName(self::LATITUDE_FINANCE_DEBUG_MODE);
     }
 
     public function hookHeader($params)

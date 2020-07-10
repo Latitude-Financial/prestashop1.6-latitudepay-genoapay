@@ -74,7 +74,7 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             );
         } else {
             // For cancel
-            Tool::redirect('order');
+            Tool::redirect('index.php?controller=order&step=1');
         }
 
         $customer = new Customer($cart->id_customer);

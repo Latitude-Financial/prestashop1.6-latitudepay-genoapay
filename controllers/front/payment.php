@@ -54,7 +54,10 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'currency_symbol' => $currency->sign,
             'splited_payment' => Tools::ps_round($cart->getOrderTotal() / 10, (int) $currency->decimals * _PS_PRICE_DISPLAY_PRECISION_),
             'payment_checkout_logo' => $this->getPaymentCheckoutLogo(),
-            'current_module_uri' => $this->module->getPathUri()
+            'current_module_uri' => $this->module->getPathUri(),
+            'payment_gateway_name' => $this->module->getPaymentGatewayNameByCurrencyCode($currency->iso_code),
+            'branding_color' => ($currency->iso_code == "AUD") ? "rgb(57, 112, 255)" : "rgb(49, 181, 156)",
+            'doc_link' => ($currency->iso_code == "AUD") ? 'https://www.latitudepay.com/how-it-works/' : 'https://www.genoapay.com'
         ));
 
 

@@ -411,7 +411,7 @@ class Latitude_Official extends PaymentModule
         $paymentInfo = $this->l("Available now.");
 
         if ($price >= 20 && $price <= 1500) {
-           $weekly = $price / 10;
+           $weekly = round($price / 10, 2);
            $paymentInfo = "10 weekly payments of <strong>$${weekly}</strong>";
         }
 

@@ -26,7 +26,7 @@
 
     <p style="font-weight: 600;">You will be redirected to the {$payment_gateway_name} website when you select Continue to Payment.</p>
 
-    <p style="color:rgb(102, 102, 102)">{$payment_description|unescape:'html'}</p>
+    {* <p style="color:rgb(102, 102, 102)">{$payment_description|unescape:'html'}</p> *}
 
     <input
         style="background: none; padding:10px 20px; color: white; border: none; font-weight: 700; background-color: #26a65b;"

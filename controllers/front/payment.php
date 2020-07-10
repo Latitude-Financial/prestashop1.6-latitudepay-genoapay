@@ -106,7 +106,6 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $cookie = $this->getCookie();
             $currency   = $this->context->currency;
             $paymentGatewayName = $this->module->getPaymentGatewayNameByCurrencyCode($currency->iso_code);
-        //     $session    = $this->get_checkout_session();
             $gateway    = $this->module->getGateway($paymentGatewayName);
             $reference  = $this->getReferenceNumber();
             // Save the reference for validation when response coming back from

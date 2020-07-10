@@ -143,12 +143,6 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                 ]
             );
 
-            throw new Exception('xxxx');
-            // echo "<pre>";
-            // var_dump($payment);
-            // echo "</pre>";
-            // die();
-
             $response = $gateway->purchase($payment);
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
         } catch (BinaryPay_Exception $e) {

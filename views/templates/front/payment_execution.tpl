@@ -26,7 +26,7 @@
 
     <p style="font-size: 22px; color:{$branding_color}; font-weight: 600; margin-bottom: 20px">{l s="No interest." mod="latitude_official" }<span style="text-decoration: underline; margin-left: 5px;">{l s="Ever." mod="latitude_official" }</span></p>
 
-    <p style="font-weight: 600;">You will be redirected to the {$payment_gateway_name} website when you select Continue to Payment.</p>
+    <p style="font-weight: 600; font-size: 15px;">You will be redirected to the {$payment_gateway_name} website when you select Continue to Payment.</p>
 
     {* <p style="color:rgb(102, 102, 102)">{$payment_description|unescape:'html'}</p> *}
 

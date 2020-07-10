@@ -103,7 +103,7 @@ class Latitude_Official extends PaymentModule
         $this->tab = 'payments_gateways';
 
         $this->version = '1.0';
-        $this->author = 'MageBinary';
+        $this->author = 'Latitude Financial Services';
 
         /**
          * Indicates whether to load the module's class when displaying the "Modules" page in the back office.

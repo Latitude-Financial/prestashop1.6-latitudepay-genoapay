@@ -5,16 +5,22 @@
 
 <form action="{$purchase_url|escape:'html'}" method="get" style="color: #333434; font-size: 16px; max-width: 500px; line-height: 24px">
     {if $currency_code === 'NZD'}
-        <img src="{$payment_checkout_logo}" id="genoapay-popup" alt="GenoaPay" style="cursor: pointer;"/>
+        <img src="{$payment_checkout_logo}" alt="GenoaPay" />
     {elseif $currency_code === 'AUD'}
-        <img src="{$payment_checkout_logo}" id="latitudepay-popup" alt="LatitudePay" style="cursor: pointer;" />
+        <img src="{$payment_checkout_logo}" alt="LatitudePay" />
     {/if}
 
     <div style="margin:10px 0px;">
         <span style="font-weight: 700; line-height: 24px;">{l s="Shop now pay later."}</span>
-        <a id="genoapay-link-popup" href="{$doc_link}" target="_blank" style="text-decoration: underline; marigin-left: 5px; color: {$branding_color}">
-            {l s="Learn More"}
-        </a>
+        {if $currency_code === 'NZD'}
+            <a id="genoapay-popup" href="javascript:void(0)" target="_blank" style="text-decoration: underline; marigin-left: 5px; color: {$branding_color}">
+                {l s="Learn More"}
+            </a>
+        {elseif $currency_code === 'AUD'}
+            <a id="latitudepay-popup" href="javascript:void(0)" target="_blank" style="text-decoration: underline; marigin-left: 5px; color: {$branding_color}">
+                {l s="Learn More"}
+            </a>
+        {/if}
     </div>
     <p style="margin-bottom: 20px;">{l s="10 interest free payments from "}<strong style="color:{$branding_color}">{$currency_code}{$currency_symbol}{$splited_payment}</strong></p>
 

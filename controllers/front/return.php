@@ -73,8 +73,7 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             /**
              * @todo: display the error message after the redirection
              */
-            echo Tools::displayError(Tools::getValue('message'));
-            sleep(5);
+            $this->context->cookie->redirect_error = Tools::getValue('message');
             Tools::redirect('index.php?controller=order&step=1');
             // $this->module->validateOrder(
             //     $cart->id,

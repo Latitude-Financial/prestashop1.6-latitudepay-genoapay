@@ -85,6 +85,8 @@ class Latitude_Official extends PaymentModule
         'header',
         'payment',
         'displayProductButtons',
+        'displayPaymentReturn',
+        'displayTop'
     );
 
     public function __construct()
@@ -170,10 +172,32 @@ class Latitude_Official extends PaymentModule
         /**
          * @todo: remove the hard code, use the hooks array to automate the registerHook process
          */
-        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header') || !$this->registerHook('displayPaymentReturn')) {
+        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header') || !$this->registerHook('displayPaymentReturn') || !$this->registerHook('displayTop')) {
              return false;
          }
          return true;
+    }
+
+    /**
+     * For displaying error after the redirection from Latitude Finance
+     */
+    public function hookDisplayTop($params)
+    {
+        $errorMessage = $params['cookie']->redirect_error;
+
+        // No Error found, do nothing
+        if (!$errorMessage) {
+            return;
+        }
+
+        $this->context->smarty->assign(array(
+            'error_message' => $errorMessage
+        ));
+
+        // remove the old error message
+        $this->context->cookie->__unset('redirect_error');
+
+        return $this->display(__FILE__, 'errors_alert.tpl');
     }
 
     /**

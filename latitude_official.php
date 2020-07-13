@@ -131,11 +131,22 @@ class Latitude_Official extends PaymentModule
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
 
+        // If the module is not enabled or installed then do not initialize
+        if (!Module::isInstalled('latitude_official') || !Module::isEnabled('latitude_official')) {
+            return;
+        }
+
         if (!count(Currency::checkPaymentCurrencies($this->id))) {
             $this->warning = $this->l('No currency has been set for this module.');
         }
         $this->gatewayName = $this->getPaymentGatewayNameByCurrencyCode();
-        $this->gateway = $this->getGateway();
+
+        try {
+            $this->gateway = $this->getGateway();
+        } catch (Exception $e) {
+            $this->warning = $this->l($e->getMessage());
+        }
+        
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ and OZ residents who are 18 years old and over and have a valid debit or credit card.');

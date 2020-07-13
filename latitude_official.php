@@ -170,7 +170,7 @@ class Latitude_Official extends PaymentModule
         /**
          * @todo: remove the hard code, use the hooks array to automate the registerHook process
          */
-        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header')) {
+        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header') || !$this->registerHook('displayPaymentReturn')) {
              return false;
          }
          return true;
@@ -201,6 +201,19 @@ class Latitude_Official extends PaymentModule
     {
          $this->context->controller->addCSS($this->_path . '/views/css/genoapay.css');
          $this->context->controller->addCSS($this->_path . '/views/css/latitudepay.css');
+    }
+
+    public function hookDisplayPaymentReturn($params)
+    {
+        $this->context->smarty->assign(array(
+            'order_total_amount' => $params['total_to_pay'],
+            'payment_method' => $params['objOrder']->payment,
+            'email' => $params['cookie']->email,
+            'invoice_date' => $params['objOrder']->invoice_date,
+            'order_id' => Order::getUniqReferenceOf(Order::getOrderByCartId($params['objOrder']->id_cart))
+        ));
+
+        return $this->display(__FILE__, 'payment_return.tpl');
     }
 
     /**
@@ -255,7 +268,7 @@ class Latitude_Official extends PaymentModule
      */
     public function getCredentials()
     {
-        $environment = Configuration::get(self::ENVIRONMENT);
+        $environment = Tools::getValue(self::ENVIRONMENT, Configuration::get(self::ENVIRONMENT));
         $publicKey = $privateKey = '';
         switch ($environment) {
             case self::ENVIRONMENT_SANDBOX:
@@ -467,7 +480,7 @@ class Latitude_Official extends PaymentModule
     {
         /* Check if SSL is enabled */
         if (!Configuration::get('PS_SSL_ENABLED')) {
-            $this->warning[] = $this->l(
+            $this->warning = $this->l(
                 'You must enable SSL on the store if you want to use this module in production.',
                 $this->name
             );
@@ -637,7 +650,7 @@ class Latitude_Official extends PaymentModule
         try {
             $configuration = $this->getConfiguration();
         } catch (Exception $e) {
-            $this->errors[] = $e->getMessage();
+            return $this->displayError($e->getMessage());
         }
 
         if (Tools::isSubmit('submitSave')) {
@@ -647,7 +660,7 @@ class Latitude_Official extends PaymentModule
             Configuration::updateValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, $this->getConfigData('minimumAmount', $configuration, 20));
             // Increase the max order total significantly
             Configuration::updateValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, $this->getConfigData('maximumAmount', $configuration, 1500) * 1000);
-
+        
             // The values set by the shop owner
             Configuration::updateValue(self::LATITUDE_FINANCE_DEBUG_MODE, Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE));
             Configuration::updateValue(self::ENVIRONMENT, Tools::getValue(self::ENVIRONMENT));

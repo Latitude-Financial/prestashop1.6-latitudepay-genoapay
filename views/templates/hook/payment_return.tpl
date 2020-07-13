@@ -6,5 +6,14 @@
  * @author Andresa Martins <contact@andresa.dev>
  * @license https://opensource.org/licenses/afl-3.0.php
  *}
-<h1>Congratulations!</h1>
-<P>You have just completed an order using PrestaPay.</P>
+
+<h1 style="text-transform: uppercase;">{l s="Order received"}</h1>
+<p>{l s="Thank you. Your order has been received."}</p>
+
+<ul>
+    <li>{l s="Order number:"}<span style="font-weight: bold;">{$order_id}</span></li>
+    <li>{l s="Date:"}<span style="font-weight: bold;">{$invoice_date}</span></li>
+    <li>{l s="Email:"}<span style="font-weight: bold;">{$email}</span></li>
+    <li>{l s="Total:"}<span style="font-weight: bold;">{$order_total_amount}</span></li>
+    <li>{l s="Payment method:"}<span style="font-weight: bold;">{$payment_method}</span></li>
+</ul>

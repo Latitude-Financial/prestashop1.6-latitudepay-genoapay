@@ -358,6 +358,8 @@ class Latitude_Official extends PaymentModule
 
     public function getGateway($gatewayName = null)
     {
+        $message = '';
+
         if ($this->gateway instanceof BinaryPay && null === $gatewayName) {
             return $this->gateway;
         }
@@ -371,15 +373,18 @@ class Latitude_Official extends PaymentModule
             // @todo: validate credentials coming back from the account
             $this->gateway = BinaryPay::getGateway($className, $this->getCredentials());
         } catch (BinaryPay_Exception $e) {
-            $this->errors[] =  $this->l($className .': '. $e->getMessage());
-            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+            $message = $e->getMessage();
+            $this->errors[] =  $this->l($className .': '. $message);
+            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
         } catch (Exception $e) {
-            $this->errors[] = $this->l($className . ': ' . $e->getMessage());
-            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+            $message = $e->getMessage();
+            $this->errors[] = $this->l($className . ': ' . $message);
+            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
         }
 
         if (!$this->gateway) {
-            throw new Exception('The gateway object did not initialized correctly.');
+            $message = $message ? $message : 'The gateway object did not initialized correctly.';
+            throw new Exception($message);
         }
 
         // log everything

@@ -14,11 +14,11 @@
         <span style="font-weight: 700; line-height: 24px;">{l s="Shop now pay later."}</span>
         {if $currency_code === 'NZD'}
             <a id="genoapay-popup" href="javascript:void(0)" target="_blank" style="text-decoration: underline; marigin-left: 5px; color: {$branding_color}">
-                {l s="Learn More"}
+                <span style="font-size: 11px;">{l s="Learn More"}</span>
             </a>
         {elseif $currency_code === 'AUD'}
             <a id="latitudepay-popup" href="javascript:void(0)" target="_blank" style="text-decoration: underline; marigin-left: 5px; color: {$branding_color}">
-                {l s="Learn More"}
+                <span style="font-size: 11px;">{l s="Learn More"}</span>
             </a>
         {/if}
     </div>

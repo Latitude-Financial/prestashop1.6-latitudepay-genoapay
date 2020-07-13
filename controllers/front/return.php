@@ -52,11 +52,13 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
         $responseState = Tools::getValue('result');
         // success
         if (in_array($responseState, self::PAYMENT_SUCCESS_STATES)) {
+            $currencyCode = $this->context->currency->iso_code;
+            $gatewayName = $this->module->getPaymentGatewayNameByCurrencyCode($currencyCode);
             $this->module->validateOrder(
                 $cart->id,
                 self::PAYMENT_ACCEPECTED,
                 $cart->getOrderTotal(),
-                'Latitude Finance',
+                $gatewayName,
                 '',
                 array(
                     'transaction_id' => Tools::getValue('token')
@@ -71,7 +73,8 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             /**
              * @todo: display the error message after the redirection
              */
-            $this->errors[] = Tools::getValue('message');
+            echo Tools::displayError(Tools::getValue('message'));
+            sleep(5);
             Tools::redirect('index.php?controller=order&step=1');
             // $this->module->validateOrder(
             //     $cart->id,

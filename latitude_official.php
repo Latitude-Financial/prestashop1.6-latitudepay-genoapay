@@ -86,7 +86,8 @@ class Latitude_Official extends PaymentModule
         'payment',
         'displayProductButtons',
         'displayPaymentReturn',
-        'displayTop'
+        'displayTop',
+        'displayAdminOrderTabOrder'
     );
 
     public function __construct()
@@ -168,12 +169,10 @@ class Latitude_Official extends PaymentModule
      */
     public function install()
     {
-        /**
-         * @todo: remove the hard code, use the hooks array to automate the registerHook process
-         */
-        if (!parent::install() || !$this->registerHooks())
+        if (!parent::install() || !$this->registerHooks()) {
             return false;
         }
+
         return true;
     }
 
@@ -247,6 +246,11 @@ class Latitude_Official extends PaymentModule
         ));
 
         return $this->display(__FILE__, 'payment_return.tpl');
+    }
+
+    public function hookDisplayAdminOrderTabOrder($params)
+    {
+        return $this->display(__FILE__, 'admin-refund.tpl');
     }
 
     /**

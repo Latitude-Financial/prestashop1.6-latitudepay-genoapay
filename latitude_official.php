@@ -148,7 +148,6 @@ class Latitude_Official extends PaymentModule
         } catch (Exception $e) {
             $this->warning = $this->l($e->getMessage());
         }
-        
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ and OZ residents who are 18 years old and over and have a valid debit or credit card.');
@@ -172,10 +171,20 @@ class Latitude_Official extends PaymentModule
         /**
          * @todo: remove the hard code, use the hooks array to automate the registerHook process
          */
-        if (!parent::install() || !$this->registerHook('displayPayment') || !$this->registerHook('payment') || !$this->registerHook('displayProductButtons') || !$this->registerHook('header') || !$this->registerHook('displayPaymentReturn') || !$this->registerHook('displayTop')) {
-             return false;
-         }
-         return true;
+        if (!parent::install() || !$this->registerHooks())
+            return false;
+        }
+        return true;
+    }
+
+    protected function registerHooks()
+    {
+        foreach ($this->hooks as $hook) {
+            if (!$this->registerHook($hook)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

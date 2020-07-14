@@ -87,7 +87,7 @@ class Latitude_Official extends PaymentModule
         'displayProductButtons',
         'displayPaymentReturn',
         'displayTop',
-        'displayAdminOrderTabOrder'
+        'displayAdminOrderContentOrder'
     );
 
     public function __construct()
@@ -248,8 +248,12 @@ class Latitude_Official extends PaymentModule
         return $this->display(__FILE__, 'payment_return.tpl');
     }
 
-    public function hookDisplayAdminOrderTabOrder($params)
+    public function hookDisplayAdminOrderContentOrder($params)
     {
+        $currency = $params['currency'];
+        $this->context->smarty->assign(array(
+            'paymenet_gateway_name' => $this->getPaymentGatewayNameByCurrencyCode($currency->iso_code)
+        ));
         return $this->display(__FILE__, 'admin-refund.tpl');
     }
 

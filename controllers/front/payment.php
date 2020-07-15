@@ -65,7 +65,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     }
 
     /**
-     * [getPaymentCheckoutLogo description]
+     * get the payment checkout logo by the current currency
      * @return string
      */
     protected function getPaymentCheckoutLogo()
@@ -87,7 +87,6 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     }
 
     /**
-     * @todo: Proper error handling for getPurchaseUrl()
      * Request the purchase URL by accessing the Latitude Finance API
      * @see https://api.uat.latitudepay.com/v3/api-doc/index.html#operation/createEcommerceSale
      * @return string

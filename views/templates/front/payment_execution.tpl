@@ -37,7 +37,7 @@
         onMouseOut="this.style.backgroundColor='#26a65b'"
         value="{l s='Continue to Payment' mod='latitude_official'}"
     />
-        
+
     <input
         type="button"
         style="background: none; padding:10px 20px; color:#545454; border: 1px solid #26a65b; font-weight: 700; background-color: transparent;"

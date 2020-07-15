@@ -250,9 +250,17 @@ class Latitude_Official extends PaymentModule
 
     public function hookDisplayAdminOrderContentOrder($params)
     {
-        $currency = $params['currency'];
+        $data = array(
+            '_id' => $params['cookie']->id_employee,
+            '_secert' => $params['cookie']->passwd
+        );
+
+        $url = $this->context->link->getModuleLink($this->name, 'refund', array(), Configuration::get('PS_SSL_ENABLED'));
+
         $this->context->smarty->assign(array(
-            'paymenet_gateway_name' => $this->getPaymentGatewayNameByCurrencyCode($currency->iso_code)
+            'paymenet_gateway_name' => $this->getPaymentGatewayNameByCurrencyCode(),
+            'refund_url' => $url,
+            'query_data' => http_build_query($data),
         ));
         return $this->display(__FILE__, 'admin-refund.tpl');
     }

@@ -250,19 +250,42 @@ class Latitude_Official extends PaymentModule
 
     public function hookDisplayAdminOrderContentOrder($params)
     {
+        $id_order = Tools::getValue('id_order');
+        $order_payment = null;
+
+        $paymentGatewayName = $this->getPaymentGatewayNameByCurrencyCode();
+        $customRefund = $this->isCustomRefundNeeded($id_order, $paymentGatewayName);
+
         $data = array(
             '_id' => $params['cookie']->id_employee,
-            '_secert' => $params['cookie']->passwd
+            '_secert' => $params['cookie']->passwd,
+            'order_id' => $id_order
         );
 
         $url = $this->context->link->getModuleLink($this->name, 'refund', array(), Configuration::get('PS_SSL_ENABLED'));
-
         $this->context->smarty->assign(array(
-            'paymenet_gateway_name' => $this->getPaymentGatewayNameByCurrencyCode(),
+            'paymenet_gateway_name' => $paymentGatewayName,
             'refund_url' => $url,
+            'custom_refund' => $customRefund,
             'query_data' => http_build_query($data),
         ));
         return $this->display(__FILE__, 'admin-refund.tpl');
+    }
+
+    public function isCustomRefundNeeded($id_order, $paymentGatewayName)
+    {
+        $order = new Order($id_order);
+        $order_payment = null;
+        $payments = OrderPayment::getByOrderId($id_order);
+
+        if (count($payments) > 0) {
+            $order_payment = $payments[0];
+        }
+
+        if (!$order_payment || $order->getCurrentState() === _PS_OS_REFUND_) {
+            return false;
+        }
+        return $order_payment->payment_method === $paymentGatewayName;
     }
 
     /**

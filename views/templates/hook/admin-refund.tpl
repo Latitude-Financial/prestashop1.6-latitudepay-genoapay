@@ -7,11 +7,9 @@
 {literal}
 <script type="text/javascript">
     ;(function($, window, document) {
-        var origPartialBtn = $('#desc-order-partial_refund');
-        $(origPartialBtn).hide();
-
         if ($('#refundAction').length > 0) {
-            $(origPartialBtn).after($('#refundAction').show());
+            var origPartialBtn = $('#desc-order-partial_refund');
+            $(origPartialBtn).hide().after($('#refundAction').show());
         }
     })(jQuery, window, document);
 
@@ -26,6 +24,9 @@
                 query_data: queryData
             },
             success: function(response) {
+                if (response.status == 'success') {
+                    console.log('Success');
+                }
                 // refersh the page
                 window.location.reload();
             },

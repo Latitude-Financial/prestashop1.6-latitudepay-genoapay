@@ -2,8 +2,25 @@
 
 class latitude_officialrefundModuleFrontController extends ModuleFrontController
 {
+    /**
+     * @var integer
+     */
     protected $orderId;
 
+    /**
+     * @var string
+     */
+    protected $reference;
+
+    /**
+     * @var string
+     */
+    protected $transactionId;
+
+    /**
+     * The ajax controller for clicking the frontend GenoaPay refund or LatitudePay refund button
+     * @return json
+     */
     public function initContent() {
         $row = array();
         $json = '';
@@ -15,25 +32,26 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
             /**
              * @todo: validate the request by using _id and _secret to avoid direct access
              */
-            // if refund successed
             if ($this->refund()) {
                 $json = array(
                     'status' => 'success',
-                    'message' => 'hahahaha'
+                    'message' => sprintf('The refund with the transaction id: %s has been successfully performed. The reference of the order is: %s', $this->getTransactionId(), $this->getReference())
                 );
             } else {
                 $json = array(
                     'status' => 'error',
-                    'message' => $this->l('Error when getting product informations.')
+                    'message' => 'Error when getting product informations.'
                 );
             }
         }
+
         header('Content-Type: application/json');
         echo Tools::jsonEncode($json);
     }
 
     protected function refund()
     {
+        $response = [];
         $currencyCode = $this->context->currency->iso_code;
         $gateway = $this->module->getGateway();
         $order = new Order($this->orderId);
@@ -64,13 +82,13 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
 
         try {
             if (empty($transactionId)) {
-                throw new InvalidArgumentException($this->l(sprintf('The transaction ID for order %1$s is blank. A refund cannot be processed unless there is a valid transaction associated with the order.', $orderId)));
+                throw new InvalidArgumentException(sprintf('The transaction ID for order %1$s is blank. A refund cannot be processed unless there is a valid transaction associated with the order.', $orderId));
             }
             /**
              * Add payment transaction to the order
              */
             $qtyList = [];
-            $productList = $order->getOrderDetailList();
+            $productList = $this->getProductList($order);
             $product = new Product(reset($productList)['product_id']);
 
             foreach ($productList as $idOrderDetail) {
@@ -82,6 +100,14 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
             // { "refundId":"488c4942-b937-4f7a-812e-ad388473143c","refundDate":"2020-07-16T14:15:48+12:00","reference":"G111-706133-UGQ","commissionAmount":0 }
             $response = $gateway->refund($refund);
 
+            if (isset($response['reference'])) {
+                $this->setReference($response['reference']);
+            }
+
+            if (isset($response['refundId'])) {
+                $this->setTransactionId($response['refundId']);
+            }
+
             // Log the refund response
             BinaryPay::log(json_encode($response), true, 'prestashop-latitude-finance.log');
 
@@ -89,58 +115,93 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
             if (isset($response['refundId'])) {
                 // Create creditslip
                 OrderSlip::createOrderSlip($order, $productList, $qtyList, true);
+                $this->createNewOrderHistory($order);
 
-                $history = new OrderHistory();
-                $history->changeIdOrderState(_PS_OS_REFUND_, $this->orderId);
+                return true;
             } else {
                 // add note to the order
                 // Message: The refund amount cannot be greater than the original payment amount
+                // Display an error message
+                return false;
             }
         } catch (Exception $e) {
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+            return false;
         }
-        return true;
+    }
+
+    public function createNewOrderHistory($order)
+    {
+        // Create new OrderHistory
+        $history = new OrderHistory();
+        $history->id_order = $order->id;
+        $history->id_employee = (int)$this->context->employee->id;
+
+        $use_existings_payment = false;
+        if (!$order->hasInvoice()) {
+            $use_existings_payment = true;
+        }
+        $history->changeIdOrderState(_PS_OS_REFUND_, $order, $use_existings_payment);
+
+        $carrier = new Carrier($order->id_carrier, $order->id_lang);
+        $templateVars = array();
+        if ($history->id_order_state == Configuration::get('PS_OS_SHIPPING') && $order->shipping_number) {
+            $templateVars = array('{followup}' => str_replace('@', $order->shipping_number, $carrier->url));
+        }
+
+        // Save all changes
+        if ($history->addWithemail(true, $templateVars)) {
+            // synchronizes quantities if needed..
+            if (Configuration::get('PS_ADVANCED_STOCK_MANAGEMENT')) {
+                foreach ($order->getProducts() as $product) {
+                    if (StockAvailable::dependsOnStock($product['product_id'])) {
+                        StockAvailable::synchronize($product['product_id'], (int)$product['id_shop']);
+                    }
+                }
+            }
+        }
     }
 
     /**
-     * process_refund
-     * @todo : BinaryPay::log($e->getMessage(), true, 'woocommerce-genoapay.log'); extension wide.
+     * Build the correct structure of the product list
+     * @param  OrderCore $order
+     * @return array
      */
-    // public function process_refund($order_id, $amount = null, $reason = '')
-    // {
-    //     $gateway = $this->get_gateway();
-    //     $order = wc_get_order($order_id);
-    //     $transaction_id = $order->get_transaction_id();
+    public function getProductList($order)
+    {
+        $productList = [];
+        $orderDetailList = $order->getOrderDetailList();
+        foreach ($orderDetailList as $productDetail) {
+            $productList[] = $productDetail['id_order_detail'];
+        }
+        return $productList;
+    }
 
-    //     /**
-    //      * @todo support to add refund reason via wordpress backend
-    //      */
-    //     $refund = array(
-    //          BinaryPay_Variable::PURCHASE_TOKEN  => $transaction_id,
-    //          BinaryPay_Variable::CURRENCY        => $this->currency_code,
-    //          BinaryPay_Variable::AMOUNT          => $amount,
-    //          BinaryPay_Variable::REFERENCE       => $order->get_id(),
-    //          BinaryPay_Variable::REASON          => '',
-    //          BinaryPay_Variable::PASSWORD        => $this->credentials['password']
-    //     );
+    public function setReference($reference)
+    {
+        $this->reference = $reference;
+        return $this;
+    }
 
-    //     try {
-    //         if (empty($transaction_id)) {
-    //             throw new InvalidArgumentException(sprintf(__ ('The transaction ID for order %1$s is blank. A refund cannot be processed unless there is a valid transaction associated with the order.', 'woocommerce-payment-gateway-latitudefinance' ), $order_id ));
-    //         }
-    //         $response = $gateway->refund($refund);
-    //         $order->update_meta_data('_transaction_status', $response['status']);
-    //         $order->add_order_note (
-    //             sprintf(__('Refund successful. Amount: %1$s. Refund ID: %2$s', 'woocommerce-payment-gateway-latitudefinance'),
-    //             wc_price($amount, array(
-    //                 'currency' => $order->get_currency()
-    //             )
-    //         ), $response['refundId']));
-    //         $order->save();
-    //     } catch (Exception $e) {
-    //         BinaryPay::log($e->getMessage(), true, 'woocommerce-genoapay.log');
-    //         return new WP_Error('refund-error', sprintf(__('Exception thrown while issuing refund. Reason: %1$s Exception class: %2$s', 'woocommerce-payment-gateway-latitudefinance'), $e->getMessage(), get_class($e)));
-    //     }
-    //     return true;
-    // }
+    public function setTransactionId($transactionId)
+    {
+        $this->transactionId = $transactionId;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getReference()
+    {
+        return $this->reference;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTransactionId()
+    {
+        return $this->transactionId;
+    }
 }

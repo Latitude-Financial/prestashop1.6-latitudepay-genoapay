@@ -423,11 +423,11 @@ class Latitude_Official extends PaymentModule
         } catch (BinaryPay_Exception $e) {
             $message = $e->getMessage();
             $this->errors[] =  $this->l($className .': '. $message);
-            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
+            BinaryPay::log($message, false, 'prestashop-latitude-finance.log');
         } catch (Exception $e) {
             $message = $e->getMessage();
             $this->errors[] = $this->l($className . ': ' . $message);
-            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
+            BinaryPay::log($message, false, 'prestashop-latitude-finance.log');
         }
 
         if (!$this->gateway) {

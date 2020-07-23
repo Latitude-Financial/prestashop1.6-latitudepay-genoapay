@@ -580,49 +580,6 @@ class Latitude_Official extends PaymentModule
                 'input' => array(
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Title'),
-                        'desc'  => $this->l('This controls the title which the user sees during checkout.'),
-                        'name' => self::LATITUDE_FINANCE_TITLE,
-                    ),
-                    array(
-                        'type' => 'textarea',
-                        'label' => $this->l('Description'),
-                        'desc' => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'name' => 'LATITUDE_FINANCE_DESCRIPTION',
-                    ),
-                    array(
-                        'type' => 'switch',
-                        'label' => $this->l('Debug Mode'),
-                        'hint' => $this->l('Show Detailed Error Messages and API requests/responses in the log file.'),
-                        'name' => self::LATITUDE_FINANCE_DEBUG_MODE,
-                        'is_bool' => true,
-                        'values' => array(
-                            array(
-                                'id' => 'LATITUDE_FINANCE_DEBUG_MODE_ON',
-                                'value' => 1,
-                                'label' => $this->l('Enabled')
-                            ),
-                            array(
-                                'id' => 'LATITUDE_FINANCE_DEBUG_MODE_OFF',
-                                'value' => 0,
-                                'label' => $this->l('Disabled')
-                            )
-                        )
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Minimum Order Total'),
-                        'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'name' => self::LATITUDE_FINANCE_MIN_ORDER_TOTAL,
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Maximum Order Total'),
-                        'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'name' => self::LATITUDE_FINANCE_MAX_ORDER_TOTAL,
-                    ),
-                    array(
-                        'type' => 'text',
                         'label' => $this->l('API Key'),
                         'desc'  => $this->l('The Public Key for your Genoapay or Latitudepay account.'),
                         'name' => self::LATITUDE_FINANCE_PUBLIC_KEY,
@@ -650,11 +607,60 @@ class Latitude_Official extends PaymentModule
                         'label' => $this->l('Environment'),
                         'name' => self::ENVIRONMENT,
                         'col' => 4,
+                        'desc' => $this->l('Sandbox and development are for testing purpose only.'),
                         'options' => array(
                             'query' => $this->getEnvironments(),
                             'id' => 'id_option',
                             'name' => 'environment',
                         )
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Debug Mode'),
+                        'hint' => $this->l('Show Detailed Error Messages and API requests/responses in the log file.'),
+                        'name' => self::LATITUDE_FINANCE_DEBUG_MODE,
+                        'is_bool' => true,
+                        'desc' => $this->l('Turn on the debug mode to record every request and response'),
+                        'values' => array(
+                            array(
+                                'id' => 'LATITUDE_FINANCE_DEBUG_MODE_ON',
+                                'value' => 1,
+                                'label' => $this->l('Enabled')
+                            ),
+                            array(
+                                'id' => 'LATITUDE_FINANCE_DEBUG_MODE_OFF',
+                                'value' => 0,
+                                'label' => $this->l('Disabled')
+                            )
+                        )
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Title'),
+                        'readonly' => true,
+                        'desc'  => $this->l('This controls the title which the user sees during checkout.'),
+                        'name' => self::LATITUDE_FINANCE_TITLE,
+                    ),
+                    array(
+                        'type' => 'textarea',
+                        'label' => $this->l('Description'),
+                        'readonly' => true,
+                        'desc' => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
+                        'name' => 'LATITUDE_FINANCE_DESCRIPTION',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Minimum Order Total'),
+                        'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
+                        'readonly' => true,
+                        'name' => self::LATITUDE_FINANCE_MIN_ORDER_TOTAL,
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Maximum Order Total'),
+                        'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
+                        'readonly' => true,
+                        'name' => self::LATITUDE_FINANCE_MAX_ORDER_TOTAL,
                     ),
                 ),
                 'submit' => array(
@@ -693,12 +699,12 @@ class Latitude_Official extends PaymentModule
                 'environment' => 'Sandbox'
             ),
             array(
-                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
-                'environment' => 'Development'
-            ),
-            array(
                 'id_option' => self::ENVIRONMENT_PRODUCTION,
                 'environment' => 'Production'
+            ),
+            array(
+                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
+                'environment' => 'Development'
             ),
         );
     }
@@ -737,7 +743,7 @@ class Latitude_Official extends PaymentModule
             Configuration::updateValue(self::LATITUDE_FINANCE_MIN_ORDER_TOTAL, $this->getConfigData('minimumAmount', $configuration, 20));
             // Increase the max order total significantly
             Configuration::updateValue(self::LATITUDE_FINANCE_MAX_ORDER_TOTAL, $this->getConfigData('maximumAmount', $configuration, 1500) * 1000);
-        
+
             // The values set by the shop owner
             Configuration::updateValue(self::LATITUDE_FINANCE_DEBUG_MODE, Tools::getValue(self::LATITUDE_FINANCE_DEBUG_MODE));
             Configuration::updateValue(self::ENVIRONMENT, Tools::getValue(self::ENVIRONMENT));

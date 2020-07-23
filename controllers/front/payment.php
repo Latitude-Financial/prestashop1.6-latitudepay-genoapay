@@ -13,7 +13,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     /**
      * @var boolean
      */
-    protected $debug = false;
+    protected $debug = true;
 
     /**
      * @var string

@@ -31,7 +31,7 @@
     {* <p style="color:rgb(102, 102, 102)">{$payment_description|unescape:'html'}</p> *}
 
     <input
-        style="background: none; padding:10px 20px; color: white; border: none; font-weight: 700; background-color: #26a65b;"
+        style="background: none; padding:10px 20px; margin-bottom: 10px; color: white; border: none; font-weight: 700; background-color: #26a65b;"
         type="submit"
         onMouseOver="this.style.backgroundColor='#00884b'"
         onMouseOut="this.style.backgroundColor='#26a65b'"

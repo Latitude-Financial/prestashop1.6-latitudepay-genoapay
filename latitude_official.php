@@ -689,12 +689,12 @@ class Latitude_Official extends PaymentModule
     {
         return array(
             array(
-                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
-                'environment' => 'Development'
-            ),
-            array(
                 'id_option' => self::ENVIRONMENT_SANDBOX,
                 'environment' => 'Sandbox'
+            ),
+            array(
+                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
+                'environment' => 'Development'
             ),
             array(
                 'id_option' => self::ENVIRONMENT_PRODUCTION,

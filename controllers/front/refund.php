@@ -139,7 +139,7 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
         // Create new OrderHistory
         $history = new OrderHistory();
         $history->id_order = $order->id;
-        $history->id_employee = (int)$this->context->employee->id;
+        $history->id_employee = Context::getContext()->cookie->id_employee;
 
         $use_existings_payment = false;
         if (!$order->hasInvoice()) {

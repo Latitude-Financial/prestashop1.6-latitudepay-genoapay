@@ -27,11 +27,13 @@
                 if (response.status == 'success') {
                     console.log('Success');
                 }
+                // popup alert message
+                alert(response.message);
                 // refersh the page
                 window.location.reload();
             },
             error: function(response) {
-                console.log(response);
+                alert(response);
             }
         });
     }

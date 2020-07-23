@@ -33,14 +33,17 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
              * @todo: validate the request by using _id and _secret to avoid direct access
              */
             if ($this->refund()) {
+                $message = sprintf('The refund with the transaction id: %s has been successfully performed. The reference of the order is: %s', $this->getTransactionId(), $this->getReference());
                 $json = array(
                     'status' => 'success',
-                    'message' => sprintf('The refund with the transaction id: %s has been successfully performed. The reference of the order is: %s', $this->getTransactionId(), $this->getReference())
+                    'message' => $message
                 );
+
+                PrestaShopLogger::addLog($message, 1, null, 'PaymentModule', (int)$this->orderId, true);
             } else {
                 $json = array(
                     'status' => 'error',
-                    'message' => 'Error when getting product informations.'
+                    'message' => 'Error occured when refund the order.'
                 );
             }
         }
@@ -125,6 +128,7 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
                 return false;
             }
         } catch (Exception $e) {
+            PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id_order, true);
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
             return false;
         }

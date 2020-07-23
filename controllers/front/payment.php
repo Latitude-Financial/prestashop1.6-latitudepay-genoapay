@@ -11,6 +11,11 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     protected $returnUrl = _PS_BASE_URL_ . '/module/latitude_official/return';
 
     /**
+     * @var boolean
+     */
+    protected $debug = false;
+
+    /**
      * @var string
      */
     const DEFAULT_VALUE = 'NO_VALUE';
@@ -141,14 +146,20 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                 ]
             );
 
+            if ($this->debug) {
+                PrestaShopLogger::addLog('latitude_officialpaymentModuleFrontController::getPurchaseUrl - Function called.' . json_encode($payment), 1, null, 'PaymentModule', (int)$cart->id, true);
+            }
+
             $response = $gateway->purchase($payment);
             $purchaseUrl = $this->module->getConfigData('paymentUrl', $response);
         } catch (BinaryPay_Exception $e) {
-            BinaryPay::log($e->getMessage(), true, 'latitude-finance.log');
+            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+            PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$cart->id, true);
             $this->errors[] = $e->getMessage();
         } catch (Exception $e) {
             $message = $e->getMessage() ?: 'Something massively went wrong. Please try again. If the problem still exists, please contact us';
-            BinaryPay::log($message, true, 'latitude-finance.log');
+            PrestaShopLogger::addLog($message, 1, null, 'PaymentModule', (int)$cart->id, true);
+            BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
             $this->errors[] = $message;
         }
         return $purchaseUrl;

@@ -238,7 +238,7 @@ class Latitude_Official extends PaymentModule
     public function hookDisplayPaymentReturn($params)
     {
         $this->context->smarty->assign(array(
-            'order_total_amount' => $params['total_to_pay'],
+            'order_total_amount' => round($params['total_to_pay'], 2),
             'payment_method' => $params['objOrder']->payment,
             'email' => $params['cookie']->email,
             'invoice_date' => $params['objOrder']->invoice_date,
@@ -580,13 +580,13 @@ class Latitude_Official extends PaymentModule
                 'input' => array(
                     array(
                         'type' => 'text',
-                        'label' => $this->l('API Key'),
+                        'label' => $this->l('Production API Key'),
                         'desc'  => $this->l('The Public Key for your Genoapay or Latitudepay account.'),
                         'name' => self::LATITUDE_FINANCE_PUBLIC_KEY,
                     ),
                     array(
                         'type' => 'text',
-                        'label' => $this->l('API Secret'),
+                        'label' => $this->l('Production API Secret'),
                         'desc'  => $this->l('The Private Key for your Genoapay or Latitudepay account.'),
                         'name' => self::LATITUDE_FINANCE_PRIVATE_KEY,
                     ),
@@ -702,10 +702,10 @@ class Latitude_Official extends PaymentModule
                 'id_option' => self::ENVIRONMENT_PRODUCTION,
                 'environment' => 'Production'
             ),
-            array(
-                'id_option' => self::ENVIRONMENT_DEVELOPMENT,
-                'environment' => 'Development'
-            ),
+            // array(
+            //     'id_option' => self::ENVIRONMENT_DEVELOPMENT,
+            //     'environment' => 'Development'
+            // ),
         );
     }
 

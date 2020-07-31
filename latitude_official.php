@@ -655,13 +655,13 @@ class Latitude_Official extends PaymentModule
                         'readonly' => true,
                         'name' => self::LATITUDE_FINANCE_MIN_ORDER_TOTAL,
                     ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Maximum Order Total'),
-                        'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
-                        'readonly' => true,
-                        'name' => self::LATITUDE_FINANCE_MAX_ORDER_TOTAL,
-                    ),
+                    // array(
+                    //     'type' => 'text',
+                    //     'label' => $this->l('Maximum Order Total'),
+                    //     'desc'  => $this->l('This option can be set from your account portal. When the Save Changes button is clicked, this option will update automatically.'),
+                    //     'readonly' => true,
+                    //     'name' => self::LATITUDE_FINANCE_MAX_ORDER_TOTAL,
+                    // ),
                 ),
                 'submit' => array(
                     'name' => 'submitSave',

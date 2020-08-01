@@ -14,6 +14,6 @@
     <li>{l s="Order number:"}<span style="font-weight: bold;">{$order_id}</span></li>
     <li>{l s="Date:"}<span style="font-weight: bold;">{$invoice_date}</span></li>
     <li>{l s="Email:"}<span style="font-weight: bold;">{$email}</span></li>
-    <li>{l s="Total:"}<span style="font-weight: bold;">{$order_total_amount}</span></li>
+    <li>{l s="Total:"}<span style="font-weight: bold;">{$currency_code}{$order_total_amount}</span></li>
     <li>{l s="Payment method:"}<span style="font-weight: bold;">{$payment_method}</span></li>
 </ul>

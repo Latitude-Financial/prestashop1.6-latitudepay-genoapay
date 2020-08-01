@@ -8,7 +8,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
     /**
      * @var string
      */
-    protected $returnUrl = _PS_BASE_URL_ . '/module/latitude_official/return';
+    protected $returnUrl = '/module/latitude_official/return';
 
     /**
      * @var boolean
@@ -51,7 +51,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'currencies' => $this->module->getCurrency((int)$cart->id_currency),
             'total' => $cart->getOrderTotal(true, Cart::BOTH),
             'isoCode' => $this->context->language->iso_code,
-            // 'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
+            'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/',
             'purchase_url' => $purchaseUrl,
             'payment_method' => Configuration::get(Latitude_Official::LATITUDE_FINANCE_TITLE),
             'payment_description' => Configuration::get(Latitude_Official::LATITUDE_FINANCE_DESCRIPTION),
@@ -62,7 +62,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             'current_module_uri' => $this->module->getPathUri(),
             'payment_gateway_name' => $this->module->getPaymentGatewayNameByCurrencyCode($currency->iso_code),
             'branding_color' => ($currency->iso_code == "AUD") ? "rgb(57, 112, 255)" : "rgb(49, 181, 156)",
-            'doc_link' => ($currency->iso_code == "AUD") ? 'https://www.latitudepay.com/how-it-works/' : 'https://www.genoapay.com'
+            'doc_link' => ($currency->iso_code == "AUD") ? 'https://www.latitudepay.com/how-it-works/' : 'https://www.genoapay.com/how-it-works/'
         ));
 
 
@@ -124,7 +124,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                 BinaryPay_Variable::REFERENCE                => (string) $reference,
                 BinaryPay_Variable::AMOUNT                   => $amount,
                 BinaryPay_Variable::CURRENCY                 => $currency->iso_code ?: self::DEFAULT_VALUE,
-                BinaryPay_Variable::RETURN_URL               => $this->returnUrl,
+                BinaryPay_Variable::RETURN_URL               => $this->getReturnUrl(),
                 BinaryPay_Variable::MOBILENUMBER             => $address->phone_mobile ?: '0210123456',
                 BinaryPay_Variable::EMAIL                    => $customer->email,
                 BinaryPay_Variable::FIRSTNAME                => $customer->firstname ?: self::DEFAULT_VALUE,
@@ -163,6 +163,11 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $this->errors[] = $message;
         }
         return $purchaseUrl;
+    }
+
+    protected function getReturnUrl()
+    {
+        return $this->context->link->getModuleLink('latitude_official', 'return', array(), Configuration::get('PS_SSL_ENABLED'));
     }
 
     /**

@@ -238,6 +238,7 @@ class Latitude_Official extends PaymentModule
     public function hookDisplayPaymentReturn($params)
     {
         $this->context->smarty->assign(array(
+            'currency_code' => Context::getContext()->currency->iso_code,
             'order_total_amount' => round($params['total_to_pay'], 2),
             'payment_method' => $params['objOrder']->payment,
             'email' => $params['cookie']->email,

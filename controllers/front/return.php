@@ -69,11 +69,7 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             // record all the FAILED status order
             // just in case we lose the response messages and transaction token ID
             BinaryPay::log($message, true, 'prestashop-latitude-finance.log');
-
-            /**
-             * @todo: display the error message after the redirection
-             */
-            $this->context->cookie->redirect_error = Tools::getValue('message');
+            $this->context->cookie->latitude_finance_redirect_error = $this->translateErrorMessage(Tools::getValue('message'));
             Tools::redirect('index.php?controller=order&step=1');
             // $this->module->validateOrder(
             //     $cart->id,
@@ -93,5 +89,23 @@ class latitude_officialreturnModuleFrontController extends ModuleFrontController
             Tools::redirect('index.php?controller=order&step=1');
 
         Tools::redirect('index.php?controller=order-confirmation&id_cart='. (int)$cart->id. '&id_module=' . (int)$this->module->id . '&id_order=' . $this->module->currentOrder. '&key=' . $customer->secure_key);
+    }
+
+    /**
+     * translateErrorMessage
+     * @param  string $message
+     * @return string
+     */
+    protected function translateErrorMessage($message)
+    {
+        switch ($message) {
+            case 'The customer cancelled the purchase.':
+                $message =  'Your purchase order has been cancelled.';
+                break;
+            default:
+                // do nothing
+                break;
+        }
+        return $message;
     }
 }

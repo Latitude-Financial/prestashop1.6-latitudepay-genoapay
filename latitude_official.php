@@ -191,7 +191,7 @@ class Latitude_Official extends PaymentModule
      */
     public function hookDisplayTop($params)
     {
-        $errorMessage = $params['cookie']->redirect_error;
+        $errorMessage = $params['cookie']->latitude_finance_redirect_error;
 
         // No Error found, do nothing
         if (!$errorMessage) {

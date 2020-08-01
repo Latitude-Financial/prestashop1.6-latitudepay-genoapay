@@ -203,7 +203,7 @@ class Latitude_Official extends PaymentModule
         ));
 
         // remove the old error message
-        $this->context->cookie->__unset('redirect_error');
+        $this->context->cookie->__unset('latitude_finance_redirect_error');
 
         return $this->display(__FILE__, 'errors_alert.tpl');
     }

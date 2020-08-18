@@ -269,6 +269,7 @@ class Latitude_Official extends PaymentModule
             'refund_url' => $url,
             'custom_refund' => $customRefund,
             'query_data' => http_build_query($data),
+            'available_amount' => $this->getAvailableRefundAmount($id_order)
         ));
         return $this->display(__FILE__, 'admin-refund.tpl');
     }
@@ -789,5 +790,17 @@ class Latitude_Official extends PaymentModule
     {
         $value = isset($array[$key]) ? $array[$key] : $default;
         return $value;
+    }
+
+    public static function getAvailableRefundAmount($orderId) {
+        $order = new Order($orderId);
+        if ($order->getTotalPaid()) {
+            $query = "SELECT SUM(`amount`) as 'total_refunded_amount'".
+                " FROM ps_order_slip".
+                " WHERE id_order = ".$orderId;
+            $totalRefundedAmount = Db::getInstance()->executeS($query);
+            return $order->getTotalPaid() - (float) $totalRefundedAmount[0]['total_refunded_amount'];
+        }
+        return false;
     }
 }

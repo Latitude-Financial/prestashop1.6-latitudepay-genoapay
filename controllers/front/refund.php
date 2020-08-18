@@ -18,17 +18,22 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
     protected $transactionId;
 
     /**
+     * @var string
+     */
+    protected $amount;
+
+    /**
      * The ajax controller for clicking the frontend GenoaPay refund or LatitudePay refund button
      * @return json
      */
     public function initContent() {
-        $row = array();
         $json = '';
         parent::initContent();
 
         if (Tools::getValue('ajax')) {
             parse_str(Tools::getValue('query_data'), $queryData);
             $this->orderId = $queryData['order_id'];
+            $this->amount = (float) $queryData['amount'];
             /**
              * @todo: validate the request by using _id and _secret to avoid direct access
              */
@@ -47,14 +52,12 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
                 );
             }
         }
-
         header('Content-Type: application/json');
         echo Tools::jsonEncode($json);
     }
 
     protected function refund()
     {
-        $response = [];
         $currencyCode = $this->context->currency->iso_code;
         $gateway = $this->module->getGateway();
         $order = new Order($this->orderId);
@@ -64,20 +67,19 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
         /**
          * @todo: check refund has been done
          */
-        if (count($payments) >= 2 || count($payments) < 1) {
+        if (!Latitude_Official::getAvailableRefundAmount($this->orderId)) {
             $this->errors = "The order has been refunded already.";
             return;
         }
 
         $payment = reset($payments);
         $transactionId = $payment->transaction_id;
-        $amount = $payment->amount;
         $reference = $payment->order_reference;
 
         $refund = array(
             BinaryPay_Variable::PURCHASE_TOKEN  => $transactionId,
             BinaryPay_Variable::CURRENCY        => $currencyCode,
-            BinaryPay_Variable::AMOUNT          => $amount,
+            BinaryPay_Variable::AMOUNT          => $this->amount,
             BinaryPay_Variable::REFERENCE       => $reference,
             BinaryPay_Variable::REASON          => '',
             BinaryPay_Variable::PASSWORD        => $credentials['password']

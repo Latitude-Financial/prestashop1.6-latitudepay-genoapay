@@ -1,7 +1,13 @@
 {if $custom_refund && $available_amount}
-    <div class="btn latitudeRefund" id="refundAction" style="display: none; border: 1px #ccc solid; cursor: pointer">
+    <div class="btn latitudeRefund" id="refundAction" style="display: none; border: 1px #ccc solid; cursor: pointer; margin-left: 5px;">
         <span class="refundBoxLabel">
-            <i class="icon-exchange"></i> {l s=$paymenet_gateway_name} Refund
+            <i class="icon-exchange"></i>
+            {l s=$paymenet_gateway_name}
+            {if $total_paid > $available_amount}
+                Partial Refund (Gateway refund only)
+            {else}
+                 Full Refund
+            {/if}
         </span>
         <div id="latitudeRefundBox" style="display: none;">
             <input name="refund_amount" type="text" placeholder="Refund amount" value="{l s=$available_amount }" data-maximum="{l s=$available_amount }">
@@ -16,7 +22,7 @@
     ;(function($, window, document) {
         if ($('#refundAction').length > 0) {
             var origPartialBtn = $('#desc-order-partial_refund');
-            $(origPartialBtn).hide().after($('#refundAction').show());
+            $(origPartialBtn).show().after($('#refundAction').show());
             var latitudeRefundBoxContainer = $("#refundAction");
             var refundAmountInput = latitudeRefundBoxContainer.find("input[name='refund_amount']");
             var refundBtn = latitudeRefundBoxContainer.find(".btn-refund");

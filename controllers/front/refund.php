@@ -58,77 +58,37 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
 
     protected function refund()
     {
-        $currencyCode = $this->context->currency->iso_code;
-        $gateway = $this->module->getGateway();
         $order = new Order($this->orderId);
-        $payments = $order->getOrderPayments();
-        $credentials = $this->module->getCredentials();
-
-        /**
-         * @todo: check refund has been done
-         */
-        if (!Latitude_Official::getAvailableRefundAmount($this->orderId)) {
-            $this->errors = "The order has been refunded already.";
-            return;
-        }
-
-        $payment = reset($payments);
-        $transactionId = $payment->transaction_id;
-        $reference = $payment->order_reference;
-
-        $refund = array(
-            BinaryPay_Variable::PURCHASE_TOKEN  => $transactionId,
-            BinaryPay_Variable::CURRENCY        => $currencyCode,
-            BinaryPay_Variable::AMOUNT          => $this->amount,
-            BinaryPay_Variable::REFERENCE       => $reference,
-            BinaryPay_Variable::REASON          => '',
-            BinaryPay_Variable::PASSWORD        => $credentials['password']
-        );
-
         try {
-            if (empty($transactionId)) {
-                throw new InvalidArgumentException(sprintf('The transaction ID for order %1$s is blank. A refund cannot be processed unless there is a valid transaction associated with the order.', $orderId));
+            $refundRequest = $this->module->_makeRefund($order, $this->amount);
+            if ($refundRequest['success']) {
+                $response = $refundRequest['response'];
+                if (isset($response['reference'])) {
+                    $this->setReference($response['reference']);
+                }
+
+                if (isset($response['refundId'])) {
+                    $this->setTransactionId($response['refundId']);
+                }
+
+                // refund successfully
+                if (isset($response['refundId'])) {
+                    if ($this->module->getAvailableRefundAmount($this->orderId) === $order->getTotalPaid()) {
+                        $qtyList = [];
+                        $productList = $this->module->getProductList($order);
+                        foreach ($productList as $idOrderDetail) {
+                            $orderDetail = new OrderDetail((int)$idOrderDetail);
+                            $orderQty = $orderDetail->product_quantity;
+                            $qtyList[(int)$idOrderDetail] = $orderQty;
+                        }
+                        // Create creditslip
+                        OrderSlip::createOrderSlip($order, $productList, $qtyList, true);
+                        $this->createNewOrderHistory($order);
+                    }
+                    return true;
+                }
             }
-            /**
-             * Add payment transaction to the order
-             */
-            $qtyList = [];
-            $productList = $this->getProductList($order);
-            $product = new Product(reset($productList)['product_id']);
-
-            foreach ($productList as $idOrderDetail) {
-                $orderDetail = new OrderDetail((int)$idOrderDetail);
-                $orderQty = $orderDetail->product_quantity;
-                $qtyList[(int)$idOrderDetail] = $orderQty;
-            }
-
-            // { "refundId":"488c4942-b937-4f7a-812e-ad388473143c","refundDate":"2020-07-16T14:15:48+12:00","reference":"G111-706133-UGQ","commissionAmount":0 }
-            $response = $gateway->refund($refund);
-
-            if (isset($response['reference'])) {
-                $this->setReference($response['reference']);
-            }
-
-            if (isset($response['refundId'])) {
-                $this->setTransactionId($response['refundId']);
-            }
-
-            // Log the refund response
-            BinaryPay::log(json_encode($response), true, 'prestashop-latitude-finance.log');
-
-            // refund successfully
-            if (isset($response['refundId'])) {
-                // Create creditslip
-                OrderSlip::createOrderSlip($order, $productList, $qtyList, true);
-                $this->createNewOrderHistory($order);
-
-                return true;
-            } else {
-                // add note to the order
-                // Message: The refund amount cannot be greater than the original payment amount
-                // Display an error message
-                return false;
-            }
+            return false;
         } catch (Exception $e) {
             PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id_order, true);
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
@@ -166,21 +126,6 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
                 }
             }
         }
-    }
-
-    /**
-     * Build the correct structure of the product list
-     * @param  OrderCore $order
-     * @return array
-     */
-    public function getProductList($order)
-    {
-        $productList = [];
-        $orderDetailList = $order->getOrderDetailList();
-        foreach ($orderDetailList as $productDetail) {
-            $productList[] = $productDetail['id_order_detail'];
-        }
-        return $productList;
     }
 
     public function setReference($reference)

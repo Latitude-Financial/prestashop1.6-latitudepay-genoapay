@@ -83,11 +83,13 @@ class Latitude_Official extends PaymentModule
     */
     public $hooks = array(
         'header',
+        'backOfficeHeader',
         'payment',
         'displayProductButtons',
         'displayPaymentReturn',
         'displayTop',
-        'displayAdminOrderContentOrder'
+        'displayAdminOrderContentOrder',
+        'actionOrderSlipAdd'
     );
 
     public function __construct()
@@ -235,6 +237,20 @@ class Latitude_Official extends PaymentModule
          $this->context->controller->addCSS($this->_path . '/views/css/latitudepay.css');
     }
 
+    public function hookBackOfficeHeader()
+    {
+        if (Tools::getValue('controller') == "AdminOrders" && Tools::getValue('id_order')) {
+            $paymentGatewayName = $this->getPaymentGatewayNameByCurrencyCode();
+            $customRefund = $this->isCustomRefundNeeded(Tools::getValue('id_order'), $paymentGatewayName);
+            if ($customRefund) {
+                Media::addJsDefL('latitude_refund_js', $this->l('Refund '.$paymentGatewayName));
+                $this->context->controller->addJS(_PS_MODULE_DIR_ . $this->name . '/views/js/latitude_order.js');
+            }
+        }
+
+        return null;
+    }
+
     public function hookDisplayPaymentReturn($params)
     {
         $this->context->smarty->assign(array(
@@ -252,7 +268,7 @@ class Latitude_Official extends PaymentModule
     public function hookDisplayAdminOrderContentOrder($params)
     {
         $id_order = Tools::getValue('id_order');
-        $order_payment = null;
+        $order = new Order($id_order);
 
         $paymentGatewayName = $this->getPaymentGatewayNameByCurrencyCode();
         $customRefund = $this->isCustomRefundNeeded($id_order, $paymentGatewayName);
@@ -269,9 +285,24 @@ class Latitude_Official extends PaymentModule
             'refund_url' => $url,
             'custom_refund' => $customRefund,
             'query_data' => http_build_query($data),
-            'available_amount' => $this->getAvailableRefundAmount($id_order)
+            'available_amount' => $this->getAvailableRefundAmount($id_order),
+            'total_paid' => $order->getTotalPaid()
         ));
         return $this->display(__FILE__, 'admin-refund.tpl');
+    }
+
+    public function hookActionOrderSlipAdd($params)
+    {
+        if (Tools::isSubmit('doPartialRefundLatitude')) {
+            $order = $params['order'];
+            $amount = floatval(Tools::getValue('partialRefundShippingCost', ''));
+
+            foreach ($params['productList'] as $product) {
+                $amount += $product['amount'];
+            }
+
+            $this->_makeRefund($order, $amount);
+        }
     }
 
     public function isCustomRefundNeeded($id_order, $paymentGatewayName)
@@ -338,7 +369,7 @@ class Latitude_Official extends PaymentModule
      *
      * @param int $storeId
      *
-     * @return string
+     * @return array
      */
     public function getCredentials()
     {
@@ -362,13 +393,12 @@ class Latitude_Official extends PaymentModule
                 break;
         }
 
-        $credentials = array(
+        return array(
             'username'      => $publicKey,
             'password'      => $privateKey,
             'environment'   => $environment,
             'accountId'     => ''
         );
-        return $credentials;
     }
 
     public function getPaymentGatewayNameByCurrencyCode($currencyCode = null)
@@ -793,14 +823,120 @@ class Latitude_Official extends PaymentModule
     }
 
     public static function getAvailableRefundAmount($orderId) {
+        /** @var OrderCore $order */
         $order = new Order($orderId);
         if ($order->getTotalPaid()) {
             $query = "SELECT SUM(`amount`) as 'total_refunded_amount'".
                 " FROM ps_order_slip".
                 " WHERE id_order = ".$orderId;
             $totalRefundedAmount = Db::getInstance()->executeS($query);
-            return $order->getTotalPaid() - (float) $totalRefundedAmount[0]['total_refunded_amount'];
+            if (count($totalRefundedAmount)) {
+                return $order->getTotalPaid() - (float) reset($totalRefundedAmount)['total_refunded_amount'];
+            }
+            return $order->getTotalPaid();
         }
         return false;
+    }
+
+    public function _addNewPrivateMessage($id_order, $message)
+    {
+        if (!(bool) $id_order) {
+            return false;
+        }
+
+        $new_message = new Message();
+        $message = strip_tags($message, '<br>');
+
+        if (!Validate::isCleanHtml($message)) {
+            $message = $this->l('Payment message is not valid, please check your module.');
+        }
+
+        $new_message->message = $message;
+        $new_message->id_order = (int) $id_order;
+        $new_message->private = 1;
+
+        return $new_message->add();
+    }
+
+    /**
+     * @param OrderCore $order
+     * @param float $amount
+     * @param string $reason
+     * @throws BinaryPay_Exception
+     */
+    public function _makeRefund($order, $amount, $reason = "")
+    {
+        $currencyCode = Context::getContext()->currency->iso_code;
+        $gateway = $this->getGateway();
+        $payments = $order->getOrderPayments();
+        $credentials = $this->getCredentials();
+        $availableRefundAmount = $this->getAvailableRefundAmount($order->id);
+        if (!$availableRefundAmount || $availableRefundAmount > $order->getTotalPaid()) {
+            return array(
+                "success" => false,
+                "message" => "The order has been refunded already"
+            );
+        }
+
+        $payment = reset($payments);
+        $transactionId = $payment->transaction_id;
+        $reference = $payment->order_reference;
+
+        $refund = array(
+            BinaryPay_Variable::PURCHASE_TOKEN => $transactionId,
+            BinaryPay_Variable::CURRENCY => $currencyCode,
+            BinaryPay_Variable::AMOUNT => $amount,
+            BinaryPay_Variable::REFERENCE => $reference,
+            BinaryPay_Variable::REASON => $reason,
+            BinaryPay_Variable::PASSWORD => $credentials['password']
+        );
+
+        try {
+            if (empty($transactionId))
+            {
+                throw new InvalidArgumentException(sprintf('The transaction ID for order %1$s is blank. A refund cannot 
+                be processed unless there is a valid transaction associated with the order.', $order->id));
+            }
+            $response = $gateway->refund($refund);
+            // Log the refund response
+            BinaryPay::log(json_encode($response), true, 'prestashop-latitude-finance.log');
+            if (Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)) {
+                $this->_addNewPrivateMessage($order->id, json_encode($response));
+            }
+            return array(
+                "success" => true,
+                "response" => $response
+            );
+        }
+        catch (BinaryPay_Exception $e)
+        {
+            PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id, true);
+            BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
+            if (Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)) {
+                $this->_addNewPrivateMessage($order->id, $e->getMessage());
+            }
+            return array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Build the correct structure of the product list
+     * @param OrderCore $order
+     * @return array
+     */
+    public function getProductList($order)
+    {
+        $productList = [];
+        $orderDetailList = $order->getOrderDetailList();
+        foreach ($orderDetailList as $productDetail) {
+            $productList[] = $productDetail['id_order_detail'];
+        }
+        return $productList;
     }
 }

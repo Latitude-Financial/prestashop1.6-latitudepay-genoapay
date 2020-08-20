@@ -2,15 +2,13 @@
     <div class="btn latitudeRefund" id="refundAction" style="display: none; border: 1px #ccc solid; cursor: pointer; margin-left: 5px;">
         <span class="refundBoxLabel">
             <i class="icon-exchange"></i>
-            {l s=$paymenet_gateway_name}
+            {l s=$paymenet_gateway_name} Full Refund
             {if $total_paid > $available_amount}
-                Partial Refund (Gateway refund only)
-            {else}
-                 Full Refund
+                (Gateway refund only)
             {/if}
         </span>
         <div id="latitudeRefundBox" style="display: none;">
-            <input name="refund_amount" type="text" placeholder="Refund amount" value="{l s=$available_amount }" data-maximum="{l s=$available_amount }">
+            <input name="refund_amount" type="text" placeholder="Refund amount" value="{l s=$available_amount }" data-maximum="{l s=$available_amount }" readonly>
             <button class="btn  btn-refund" style="margin: 0 2px; border: 1px #ccc solid" data-return_url="{$refund_url}" data-query="{$query_data}">Refund</button>
             <button class="btn btn-cancel" style="border: 1px #ccc solid">Cancel</button>
         </div>
@@ -38,34 +36,22 @@
             });
             refundBtn.on("click", function (e) {
                 e.stopPropagation();
-                var refundBtn = $(this);
                 if (!refundBtn.prop('disabled')) {
                     if (isValidRefundAmount(refundAmountInput)) {
                         var returnUrl = refundBtn.data('return_url');
                         var queryData = refundBtn.data('query');
-                        queryData += ("&amount="+ refundAmountInput.val());
-                        processRefund(refundBtn, refundAmountInput, returnUrl, queryData);
+                        processRefund(refundBtn, returnUrl, queryData);
                     } else {
                         alert("The maximum allowed refund amount is "+refundAmountInput.data('maximum')+" only!");
                     }
                 }
             });
-
-            refundAmountInput.on('keyup', function () {
-                if (!isValidRefundAmount($(this))) {
-                    $(this).css('border', '1px red solid');
-                    refundBtn.prop('disabled', true);
-                } else {
-                    $(this).css('border', '1px #ccc solid');
-                    refundBtn.prop('disabled', false);
-                }
-            })
         }
     })(jQuery, window, document);
 
-    function processRefund(refundBtn, refundAmountInput, refundUrl, queryData) {
+    function processRefund(refundBtn, refundUrl, queryData) {
         refundBtn.prop('disabled', true);
-        refundAmountInput.prop('disabled', true);
+        refundBtn.text("Refunding...");
         $.ajax({
             url: refundUrl,
             type: 'GET',
@@ -74,16 +60,17 @@
                 query_data: queryData
             },
             success: function(response) {
-                if (response.status == 'success') {
-                    console.log('Success');
+                if (response.status === 'success') {
+                    refundBtn.text("Success...");
+                    setTimeout(window.location.reload(), 500)
                 } else {
+                    refundBtn.text("Try again");
                     alert(response.message);
                 }
-                // refersh the page
-                window.location.reload();
             },
             error: function(response) {
-                alert(response);
+                refundBtn.text("Try again");
+                alert(response.error);
             }
         });
     }

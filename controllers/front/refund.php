@@ -33,7 +33,7 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
         if (Tools::getValue('ajax')) {
             parse_str(Tools::getValue('query_data'), $queryData);
             $this->orderId = $queryData['order_id'];
-            $this->amount = (float) $queryData['amount'];
+            $this->amount = $this->module->getAvailableRefundAmount($this->orderId);
             /**
              * @todo: validate the request by using _id and _secret to avoid direct access
              */

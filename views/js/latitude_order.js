@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
-
-    // Make partial order refund in Order page in BO
     $(document).on('click', '#desc-order-partial_refund', function () {
-        if ($('#doPartialRefundBraintree').length == 0) {
-            var p, label, input; // Create checkbox for Braintree refund
-
+        if ($('#doPartialRefundLatitude').length === 0) {
+            var p, label, input; // Create checkbox for Latitude refund
             p = document.createElement('p');
             p.className = 'checkbox';
             label = document.createElement('label');
@@ -20,5 +17,4 @@ document.addEventListener("DOMContentLoaded", function () {
             $('button[name=partialRefund]').parent('.partial_refund_fields').prepend(p);
         }
     });
-
 });

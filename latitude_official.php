@@ -12,6 +12,9 @@ require_once(__DIR__ . '/includes/autoload.php');
 
 class Latitude_Official extends PaymentModule
 {
+    const GENOAPAY_PAYMENT_METHOD_CODE = 'Genoapay';
+    const LATITUDE_PAYMENT_METHOD_CODE = 'Latitudepay';
+    const ALLOWED_PAYMENT_GATEWAYS= [self::GENOAPAY_PAYMENT_METHOD_CODE, self::LATITUDE_PAYMENT_METHOD_CODE];
     protected $_html = '';
 
     /**
@@ -144,13 +147,8 @@ class Latitude_Official extends PaymentModule
         if (!count(Currency::checkPaymentCurrencies($this->id))) {
             $this->warning = $this->l('No currency has been set for this module.');
         }
-        $this->gatewayName = $this->getPaymentGatewayNameByCurrencyCode();
 
-        try {
-            $this->gateway = $this->getGateway();
-        } catch (Exception $e) {
-            $this->warning = $this->l($e->getMessage());
-        }
+        $this->_setPaymentGateway();
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ and OZ residents who are 18 years old and over and have a valid debit or credit card.');
@@ -240,7 +238,8 @@ class Latitude_Official extends PaymentModule
     public function hookBackOfficeHeader()
     {
         if (Tools::getValue('controller') == "AdminOrders" && Tools::getValue('id_order')) {
-            $paymentGatewayName = $this->getPaymentGatewayNameByCurrencyCode();
+            $order = new Order((int) Tools::getValue('id_order'));
+            $paymentGatewayName = $this->_getGatewayNameByPaymentMethod($order);
             $customRefund = $this->isCustomRefundNeeded(Tools::getValue('id_order'), $paymentGatewayName);
             if ($customRefund) {
                 Media::addJsDefL('latitude_refund_js', $this->l('Refund '.$paymentGatewayName));
@@ -268,9 +267,8 @@ class Latitude_Official extends PaymentModule
     public function hookDisplayAdminOrderContentOrder($params)
     {
         $id_order = Tools::getValue('id_order');
-        $order = new Order($id_order);
-
-        $paymentGatewayName = $this->getPaymentGatewayNameByCurrencyCode();
+        $order = new Order((int) $id_order);
+        $paymentGatewayName = $this->_getGatewayNameByPaymentMethod($order);
         $customRefund = $this->isCustomRefundNeeded($id_order, $paymentGatewayName);
 
         $data = array(
@@ -318,6 +316,11 @@ class Latitude_Official extends PaymentModule
         if (!$order_payment || $order->getCurrentState() === _PS_OS_REFUND_) {
             return false;
         }
+        /** @var BinaryPay $gateway */
+        $gateway = $this->getGateway($paymentGatewayName);
+        $data = array(
+            BinaryPay_Variable::PURCHASE_TOKEN => reset($payments)->transaction_id
+        );
         return $order_payment->payment_method === $paymentGatewayName;
     }
 
@@ -423,10 +426,10 @@ class Latitude_Official extends PaymentModule
         $this->gatewayName = $gatewayName = '';
         switch ($currencyCode) {
             case 'AUD':
-                $this->gatewayName = $gatewayName = 'Latitudepay';
+                $this->gatewayName = $gatewayName = self::LATITUDE_PAYMENT_METHOD_CODE;
                 break;
             case 'NZD':
-                $this->gatewayName = $gatewayName = 'Genoapay';
+                $this->gatewayName = $gatewayName = self::GENOAPAY_PAYMENT_METHOD_CODE;
                 break;
             default:
                 throw new Exception("The extension does not support for the current currency for the shop.");
@@ -519,10 +522,10 @@ class Latitude_Official extends PaymentModule
     {
         $paymentLogo = '';
         switch ($this->gatewayName) {
-            case 'Genoapay':
+            case self::GENOAPAY_PAYMENT_METHOD_CODE:
                 $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg';
                 break;
-            case 'Latitudepay':
+            case self::LATITUDE_PAYMENT_METHOD_CODE:
                 $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/latitudepay.svg';
                 break;
             default:
@@ -859,14 +862,19 @@ class Latitude_Official extends PaymentModule
     }
 
     /**
+     * Send refund request to payment gateway
      * @param OrderCore $order
      * @param float $amount
      * @param string $reason
+     * @return array
      * @throws BinaryPay_Exception
      */
     public function _makeRefund($order, $amount, $reason = "")
     {
-        $currencyCode = Context::getContext()->currency->iso_code;
+        $currencyCode = $this->_getCurrencyCodeByPaymentMethod($order->payment);
+        if (!$currencyCode) {
+            $currencyCode = self::getOrderCurrencyCode($order->id);
+        }
         $gateway = $this->getGateway();
         $payments = $order->getOrderPayments();
         $credentials = $this->getCredentials();
@@ -907,8 +915,7 @@ class Latitude_Official extends PaymentModule
                 "success" => true,
                 "response" => $response
             );
-        }
-        catch (BinaryPay_Exception $e)
+        } catch (BinaryPay_Exception $e)
         {
             PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id, true);
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
@@ -938,5 +945,52 @@ class Latitude_Official extends PaymentModule
             $productList[] = $productDetail['id_order_detail'];
         }
         return $productList;
+    }
+
+    public static function getOrderCurrencyCode($order) {
+        $currencyId = $order->id_currency;
+        $currency = new Currency($currencyId);
+        return $currency->iso_code;
+    }
+
+    public function setGatewayNameByPaymentMethod($order) {
+        if ($gatewayName = $this->_getGatewayNameByPaymentMethod($order)) {
+            $this->gatewayName = $gatewayName;
+        }
+    }
+
+    protected function _getGatewayNameByPaymentMethod($order) {
+        if (in_array($order->payment, self::ALLOWED_PAYMENT_GATEWAYS)) {
+            return $order->payment;
+        }
+        return false;
+    }
+
+    protected function _setPaymentGateway() {
+        $order = null;
+        if (Tools::getValue('id_order')) {
+            $order = new Order((int) Tools::getValue('id_order'));
+        }
+        elseif (Tools::getValue('query_data')) {
+            parse_str(Tools::getValue('query_data'), $queryData);
+            $order = new Order((int) $queryData['order_id']);
+        }
+        if ($order) {
+            $this->getGateway($this->_getGatewayNameByPaymentMethod($order));
+        } else {
+            $iso_currency = $this->context->currency->iso_code;
+            $this->getGateway($this->getPaymentGatewayNameByCurrencyCode($iso_currency));
+        }
+    }
+
+    protected function _getCurrencyCodeByPaymentMethod($paymentMethod) {
+        switch ($paymentMethod) {
+            case self::LATITUDE_PAYMENT_METHOD_CODE:
+                return "AUD";
+            case self::GENOAPAY_PAYMENT_METHOD_CODE:
+                return "NZD";
+            default:
+                return false;
+        }
     }
 }

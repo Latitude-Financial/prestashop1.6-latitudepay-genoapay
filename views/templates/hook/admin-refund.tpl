@@ -65,6 +65,7 @@
                     setTimeout(window.location.reload(), 500)
                 } else {
                     refundBtn.text("Try again");
+                    refundBtn.prop('disabled', false);
                     alert(response.message);
                 }
             },

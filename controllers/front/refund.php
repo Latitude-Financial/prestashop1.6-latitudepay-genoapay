@@ -90,7 +90,7 @@ class latitude_officialrefundModuleFrontController extends ModuleFrontController
             }
             return false;
         } catch (Exception $e) {
-            PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id_order, true);
+            PrestaShopLogger::addLog($e->getMessage(), 1, null, 'PaymentModule', (int)$order->id, true);
             BinaryPay::log($e->getMessage(), true, 'prestashop-latitude-finance.log');
             return false;
         }

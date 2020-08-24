@@ -9,12 +9,11 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once(__DIR__ . '/includes/autoload.php');
+require_once (__DIR__.'/helpers/OrderHelper.php');
+require_once (__DIR__.'/models/LatitudeRefundTransaction.php');
 
 class Latitude_Official extends PaymentModule
 {
-    const GENOAPAY_PAYMENT_METHOD_CODE = 'Genoapay';
-    const LATITUDE_PAYMENT_METHOD_CODE = 'Latitudepay';
-    const ALLOWED_PAYMENT_GATEWAYS= [self::GENOAPAY_PAYMENT_METHOD_CODE, self::LATITUDE_PAYMENT_METHOD_CODE];
     protected $_html = '';
 
     /**
@@ -26,6 +25,10 @@ class Latitude_Official extends PaymentModule
      * @var object
      */
     public $gateway = '';
+
+    const GENOAPAY_PAYMENT_METHOD_CODE = 'Genoapay';
+    const LATITUDE_PAYMENT_METHOD_CODE = 'Latitudepay';
+    const ALLOWED_PAYMENT_GATEWAYS= [self::GENOAPAY_PAYMENT_METHOD_CODE, self::LATITUDE_PAYMENT_METHOD_CODE];
 
     /**
      * @var string
@@ -138,7 +141,6 @@ class Latitude_Official extends PaymentModule
 
         // Calling the parent constuctor method must be done after the creation of the $this->name variable and before any use of the $this->l() translation method.
         parent::__construct();
-
         // If the module is not enabled or installed then do not initialize
         if (!Module::isInstalled('latitude_official') || !Module::isEnabled('latitude_official')) {
             return;
@@ -147,8 +149,9 @@ class Latitude_Official extends PaymentModule
         if (!count(Currency::checkPaymentCurrencies($this->id))) {
             $this->warning = $this->l('No currency has been set for this module.');
         }
-
-        $this->_setPaymentGateway();
+        if (Tools::getValue(self::ENVIRONMENT, Configuration::get(self::ENVIRONMENT))) {
+            $this->_setPaymentGateway();
+        }
 
         $this->displayName = $this->l('Latitude Finance Payment Module');
         $this->description = $this->l('Available to NZ and OZ residents who are 18 years old and over and have a valid debit or credit card.');
@@ -169,7 +172,7 @@ class Latitude_Official extends PaymentModule
      */
     public function install()
     {
-        if (!parent::install() || !$this->registerHooks()) {
+        if (!parent::install() || !$this->registerHooks() || !$this->updateDatabase()) {
             return false;
         }
 
@@ -305,6 +308,7 @@ class Latitude_Official extends PaymentModule
 
     public function isCustomRefundNeeded($id_order, $paymentGatewayName)
     {
+        /** @var OrderCore $order */
         $order = new Order($id_order);
         $order_payment = null;
         $payments = OrderPayment::getByOrderId($id_order);
@@ -316,11 +320,12 @@ class Latitude_Official extends PaymentModule
         if (!$order_payment || $order->getCurrentState() === _PS_OS_REFUND_) {
             return false;
         }
-        /** @var BinaryPay $gateway */
-        $gateway = $this->getGateway($paymentGatewayName);
-        $data = array(
-            BinaryPay_Variable::PURCHASE_TOKEN => reset($payments)->transaction_id
-        );
+
+        $refundedAmount = OrderHelper::getTotalRefundedAmount($id_order);
+        if ($refundedAmount === $order->getTotalPaid()) {
+            return false;
+        }
+
         return $order_payment->payment_method === $paymentGatewayName;
     }
 
@@ -909,7 +914,30 @@ class Latitude_Official extends PaymentModule
             // Log the refund response
             BinaryPay::log(json_encode($response), true, 'prestashop-latitude-finance.log');
             if (Configuration::get(self::LATITUDE_FINANCE_DEBUG_MODE)) {
-                $this->_addNewPrivateMessage($order->id, json_encode($response));
+                if (isset($response['refundId'])) {
+                    $message = "Refund ID: ".$response['refundId'];
+                    $message .= "\n";
+                    $message .= "Refund Date: ".$response['refundDate'];
+                    $message .= "\n";
+                    $message .= "Amount: ".$amount;
+                    $this->_addNewPrivateMessage($order->id, $message);
+                } else {
+                    $this->_addNewPrivateMessage($order->id, "Response from the gateway: ".json_encode($response));
+                }
+
+            }
+
+            if (isset($response['refundId'])) {
+
+                $rTransaction = new LatitudeRefundTransaction();
+                $rTransaction->id_refund = $response['refundId'];
+                $rTransaction->id_order = $order->id;
+                $rTransaction->refund_date = $response['refundDate'];
+                $rTransaction->refund_amount = $amount;
+                $rTransaction->reference = $response['reference'];
+                $rTransaction->commission_amount = $response['commissionAmount'];
+                $rTransaction->payment_gateway = $order->payment;
+                $rTransaction->save();
             }
             return array(
                 "success" => true,
@@ -975,7 +1003,7 @@ class Latitude_Official extends PaymentModule
             parse_str(Tools::getValue('query_data'), $queryData);
             $order = new Order((int) $queryData['order_id']);
         }
-        if ($order) {
+        if ($order && in_array($order->payment, self::ALLOWED_PAYMENT_GATEWAYS)) {
             $this->getGateway($this->_getGatewayNameByPaymentMethod($order));
         } else {
             $iso_currency = $this->context->currency->iso_code;
@@ -992,5 +1020,20 @@ class Latitude_Official extends PaymentModule
             default:
                 return false;
         }
+    }
+
+    protected function updateDatabase() {
+        /* Create Refund transactions table table */
+        return Db::getInstance()->Execute('
+		CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'latitude_refund_transactions` (
+		`id_refund` varchar(100) NOT null,
+		`id_order` int(10) NOT null,
+		`refund_date` varchar(255) NOT null,
+		`reference` varchar(50) NOT null,
+		`refund_amount` decimal(20,6) NOT null,
+		`commission_amount` decimal(20,6) NOT null,
+		`payment_gateway` varchar(50) NOT null,
+		PRIMARY KEY (`id_refund`)
+		) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8');
     }
 }

@@ -834,14 +834,7 @@ class Latitude_Official extends PaymentModule
         /** @var OrderCore $order */
         $order = new Order($orderId);
         if ($order->getTotalPaid()) {
-            $query = "SELECT SUM(`amount`) as 'total_refunded_amount'".
-                " FROM ps_order_slip".
-                " WHERE id_order = ".$orderId;
-            $totalRefundedAmount = Db::getInstance()->executeS($query);
-            if (count($totalRefundedAmount)) {
-                return $order->getTotalPaid() - (float) reset($totalRefundedAmount)['total_refunded_amount'];
-            }
-            return $order->getTotalPaid();
+            return ($order->getTotalPaid() - OrderHelper::getTotalRefundedAmount($orderId));
         }
         return false;
     }

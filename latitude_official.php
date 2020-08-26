@@ -931,6 +931,10 @@ class Latitude_Official extends PaymentModule
                 $rTransaction->commission_amount = $response['commissionAmount'];
                 $rTransaction->payment_gateway = $order->payment;
                 $rTransaction->save();
+
+                if (self::getAvailableRefundAmount($order->id) !== false && !self::getAvailableRefundAmount($order->id)) {
+                    $this->_changeOrderStatus($order->id, (int) Configuration::get('PS_OS_REFUND'));
+                }
             }
             return array(
                 "success" => true,
@@ -1013,6 +1017,15 @@ class Latitude_Official extends PaymentModule
             default:
                 return false;
         }
+    }
+
+    protected function _changeOrderStatus($orderId, $statusId) {
+        /** @var OrderHistoryCore $history */
+        $history = new OrderHistory();
+        $history->id_order = (int) $orderId;
+        $history->changeIdOrderState($statusId, $history->id_order);
+        $history->addWithemail();
+        $history->save();
     }
 
     protected function updateDatabase() {

@@ -263,7 +263,7 @@ class Base
             if (is_string($key)) {
                 $this->gluedString .= $key . $glue;
             }
-            is_array($value) ? $this->recursiveImplode($value, $glue, $include_keys, $trim_all) : $this->gluedString .= trim(json_encode($value, JSON_UNESCAPED_SLASHES), '"') . $glue;
+            is_array($value) ? $this->recursiveImplode($value, $glue, $include_keys, $trim_all) : $this->gluedString .= trim(json_encode($value), '"') . $glue;
         }
         // Removes last $glue from string
         strlen($glue) > 0 and $this->gluedString = substr($this->gluedString, 0, -strlen($glue));

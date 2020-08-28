@@ -1003,8 +1003,15 @@ class Latitude_Official extends PaymentModule
         if ($order && in_array($order->payment, self::ALLOWED_PAYMENT_GATEWAYS)) {
             $this->getGateway($this->_getGatewayNameByPaymentMethod($order));
         } else {
-            $iso_currency = $this->context->currency->iso_code;
-            $this->getGateway($this->getPaymentGatewayNameByCurrencyCode($iso_currency));
+            if (isset($this->context->currency)) {
+                $iso_code = $this->context->currency->iso_code;
+            } else {
+                global $cookie;
+                $id_currency = isset($cookie->id_currency) ? $cookie->id_currency : Configuration::get('PS_CURRENCY_DEFAULT');
+                $currency = new Currency((int) $id_currency);
+                $iso_code = $currency->iso_code;
+            }
+            $this->getGateway($this->getPaymentGatewayNameByCurrencyCode($iso_code));
         }
     }
 

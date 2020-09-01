@@ -834,7 +834,7 @@ class Latitude_Official extends PaymentModule
         /** @var OrderCore $order */
         $order = new Order($orderId);
         if ($order->getTotalPaid()) {
-            return ($order->getTotalPaid() - OrderHelper::getTotalRefundedAmount($orderId));
+            return (round($order->getTotalPaid(), 2) - round(OrderHelper::getTotalRefundedAmount($orderId), 2));
         }
         return false;
     }

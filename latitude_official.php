@@ -529,10 +529,10 @@ class Latitude_Official extends PaymentModule
         $paymentLogo = '';
         switch ($this->gatewayName) {
             case self::GENOAPAY_PAYMENT_METHOD_CODE:
-                $paymentLogo =  Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg';
+                $paymentLogo =  (Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_) . $this->_path . 'logos/genoapay.svg';
                 break;
             case self::LATITUDE_PAYMENT_METHOD_CODE:
-                $paymentLogo =  Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->_path . 'logos/latitudepay.svg';
+                $paymentLogo =  (Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_) . $this->_path . 'logos/latitudepay.svg';
                 break;
             default:
                 throw new Exception("Failed to get the payment logo from the current gateway name.");

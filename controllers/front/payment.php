@@ -87,7 +87,7 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             default:
                 throw new Exception('Unsupported currency code. Please change your currency code to AUD or NZD.');
         }
-        return Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
+        return (Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_) . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
     }
 
     /**

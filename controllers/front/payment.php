@@ -86,9 +86,8 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
                 break;
             default:
                 throw new Exception('Unsupported currency code. Please change your currency code to AUD or NZD.');
-                break;
         }
-        return _PS_BASE_URL_ . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
+        return Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->module->getPathUri() . 'logos' . DIRECTORY_SEPARATOR . $logo;
     }
 
     /**
@@ -111,6 +110,10 @@ class latitude_officialpaymentModuleFrontController extends ModuleFrontControlle
             $currency   = $this->context->currency;
             $paymentGatewayName = $this->module->getPaymentGatewayNameByCurrencyCode($currency->iso_code);
             $gateway    = $this->module->getGateway($paymentGatewayName);
+            if (!$gateway) {
+                $this->errors[] = "Could not get the payment URL from payment gateway";
+                return false;
+            }
             $reference  = $this->getReferenceNumber();
             // Save the reference for validation when response coming back from
             $cookie->reference = $reference;

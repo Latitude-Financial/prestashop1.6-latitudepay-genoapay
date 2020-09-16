@@ -377,7 +377,7 @@ class Latitude_Official extends PaymentModule
      *
      * @param int $storeId
      *
-     * @return array
+     * @return array|bool
      */
     public function getCredentials()
     {
@@ -397,8 +397,8 @@ class Latitude_Official extends PaymentModule
                 $privateKey = Tools::getValue(self::LATITUDE_FINANCE_PRIVATE_KEY, Configuration::get(self::LATITUDE_FINANCE_PRIVATE_KEY));
                 break;
             default:
-                throw new Exception('Failed to get credentials because the environment value is not correct.');
-                break;
+                $this->warning = 'Failed to get credentials because the environment value is not correct.';
+                return false;
         }
 
         return array(
@@ -438,7 +438,6 @@ class Latitude_Official extends PaymentModule
                 break;
             default:
                 throw new Exception("The extension does not support for the current currency for the shop.");
-                break;
         }
 
         return $gatewayName;
@@ -459,20 +458,22 @@ class Latitude_Official extends PaymentModule
         try {
             $className = (isset(explode('_', $gatewayName)[1])) ? ucfirst(explode('_', $gatewayName)[1]) : ucfirst($gatewayName);
             // @todo: validate credentials coming back from the account
-            $this->gateway = BinaryPay::getGateway($className, $this->getCredentials());
+            if ($className && $credentials = $this->getCredentials()) {
+                $this->gateway = BinaryPay::getGateway($className, $credentials);
+            }
         } catch (BinaryPay_Exception $e) {
             $message = $e->getMessage();
             $this->errors[] =  $this->l($className .': '. $message);
-            BinaryPay::log($message, false, 'prestashop-latitude-finance.log');
         } catch (Exception $e) {
             $message = $e->getMessage();
             $this->errors[] = $this->l($className . ': ' . $message);
-            BinaryPay::log($message, false, 'prestashop-latitude-finance.log');
         }
 
         if (!$this->gateway) {
-            $message = $message ? $message : 'The gateway object did not initialized correctly.';
-            throw new Exception($message);
+            $messagePrefix = "Message: ";
+            $message = $message && $message !== $messagePrefix ? $message : 'The gateway object did not initialized correctly.';
+            BinaryPay::log($message, false, 'prestashop-latitude-finance.log');
+            return false;
         }
 
         // log everything
@@ -528,10 +529,10 @@ class Latitude_Official extends PaymentModule
         $paymentLogo = '';
         switch ($this->gatewayName) {
             case self::GENOAPAY_PAYMENT_METHOD_CODE:
-                $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg';
+                $paymentLogo =  Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->_path . 'logos/genoapay.svg';
                 break;
             case self::LATITUDE_PAYMENT_METHOD_CODE:
-                $paymentLogo =  _PS_BASE_URL_ . $this->_path . 'logos/latitudepay.svg';
+                $paymentLogo =  Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . $this->_path . 'logos/latitudepay.svg';
                 break;
             default:
                 throw new Exception("Failed to get the payment logo from the current gateway name.");
@@ -565,7 +566,7 @@ class Latitude_Official extends PaymentModule
             'payment_info' => $paymentInfo,
             'currency_code' => $currencyCode,
             'payment_logo' => $this->getPaymentLogo(),
-            'base_dir' => _PS_BASE_URL_ . __PS_BASE_URI__,
+            'base_dir' => Configuration::get('PS_SSL_ENABLED') ? _PS_BASE_URL_SSL_ : _PS_BASE_URL_ . __PS_BASE_URI__,
             'current_module_uri' => $this->_path
         ));
 
@@ -874,6 +875,12 @@ class Latitude_Official extends PaymentModule
             $currencyCode = self::getOrderCurrencyCode($order->id);
         }
         $gateway = $this->getGateway();
+        if (!$gateway) {
+            return array(
+                "success" => false,
+                "message" => "The gateway object did not initialized correctly."
+            );
+        }
         $payments = $order->getOrderPayments();
         $credentials = $this->getCredentials();
         $availableRefundAmount = $this->getAvailableRefundAmount($order->id);

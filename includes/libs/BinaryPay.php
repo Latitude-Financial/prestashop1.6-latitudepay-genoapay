@@ -277,14 +277,16 @@ abstract class BinaryPay extends Base implements GatewayInterface
 
     protected function find($field, $source)
     {
-        $config = $this->getConfig($field);
-        if (!is_array($config)) {
-            return $source[$config];
-        }
+        if (!empty($source)) {
+            $config = $this->getConfig($field);
+            if (!is_array($config)) {
+                return $source[$config];
+            }
 
-        foreach ($config as $key) {
-            if (isset($source[$key])) {
-                return $source[$key];
+            foreach ($config as $key) {
+                if (isset($source[$key])) {
+                    return $source[$key];
+                }
             }
         }
         return 'Unknown';

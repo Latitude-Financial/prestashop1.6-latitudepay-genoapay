@@ -24,7 +24,7 @@ class LatitudeRefundTransaction
     {
         return Db::getInstance()->getRow(
             "SELECT * FROM `" . self::TABLE_NAME . "`
-			WHERE `id_refund` = '".$refundId."' LIMIT 1"
+			WHERE `id_refund` = '".$refundId."'", false
         );
     }
 

@@ -297,7 +297,6 @@ class Latitude_Official extends PaymentModule
         if (Tools::isSubmit('doPartialRefundLatitude')) {
             $order = $params['order'];
             $amount = floatval(Tools::getValue('partialRefundShippingCost', ''));
-
             foreach ($params['productList'] as $product) {
                 $amount += $product['amount'];
             }
